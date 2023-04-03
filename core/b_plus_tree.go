@@ -13,14 +13,13 @@ type BPlusTree struct {
 	Order int            // B+树的阶数
 }
 
-// BPlusTreeNode B+树节点结构体
 type BPlusTreeNode struct {
-	IsLeaf bool             // 是否为叶子节点
-	Keys   []int64          // 键列表
-	Values []interface{}    // 值列表
-	Child  []*BPlusTreeNode // 子节点列表
-	Parent *BPlusTreeNode   // 父节点
-	Offset int64            // 该节点在硬盘中的偏移量
+	IsLeaf bool             `json:"is_leaf"` // 是否为叶子节点
+	Keys   []int64          `json:"keys"`    // 键列表
+	Values []interface{}    `json:"values"`  // 值列表
+	Child  []*BPlusTreeNode `json:"child"`   // 子节点列表
+	Parent *BPlusTreeNode   `json:"parent"`  // 父节点
+	Offset int64            `json:"offset"`  // 该节点在硬盘中的偏移量
 }
 
 // Insert 插入键值对

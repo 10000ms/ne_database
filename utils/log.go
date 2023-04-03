@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"time"
 )
 
@@ -42,7 +43,9 @@ func LogWarning(value ...interface{}) {
 }
 
 func LogError(value ...interface{}) {
-	log("[ERROR]", value, "31")
+	color := "31"
+	log("[ERROR]", value, color)
+	log("", []interface{}{debug.Stack()}, color)
 }
 
 func LogFatal(value ...interface{}) {
@@ -60,6 +63,7 @@ func LogSystem(value ...interface{}) {
 func ToJSON(data interface{}) string {
 	dataByte, err := json.Marshal(data)
 	if err != nil {
+		LogError(fmt.Errorf("ToJSON 错误 err: %s", err.Error()))
 		return fmt.Sprintf("%v", data)
 	}
 

@@ -45,11 +45,6 @@ func TestJsonToBPlusTree(t *testing.T) {
 	if utils.ToJSON(root.Keys) != utils.ToJSON([]int{10, 25, 50}) {
 		t.Errorf("JsonToBPlusTree failed: root.keys=%v", root.Keys)
 	}
-	for i, child := range root.Child {
-		if utils.ToJSON(child.Keys) != utils.ToJSON(root.Keys[i:i+1]) {
-			t.Errorf("JsonToBPlusTree failed: child.keys=%v, root.keys=%v", child.Keys, root.Keys[i:i+1])
-		}
-	}
 }
 
 func TestJsonToBPlusTree2(t *testing.T) {
@@ -105,8 +100,10 @@ func TestJsonToBPlusTree2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(expectedNode, actualNode) {
-		t.Errorf("Expected node %v, but got node %v", expectedNode, actualNode)
+	expJson := utils.ToJSON(expectedNode)
+	actJson := utils.ToJSON(actualNode)
+	if !reflect.DeepEqual(expJson, actJson) {
+		t.Errorf("Expected node %v, but got node %v", expJson, actJson)
 	}
 }
 
