@@ -67,11 +67,9 @@ func TestJsonToBPlusTree2(t *testing.T) {
 				  "price": 2.5
 				}
 			  ],
-			  "child": null,
-			  "parent": {}
+			  "child": []
 			}
-		  ],
-		  "parent": {}
+		  ]
 		}
 		`)
 	expectedNode := &core.BPlusTreeNode{
@@ -94,16 +92,23 @@ func TestJsonToBPlusTree2(t *testing.T) {
 		},
 		Parent: nil,
 	}
+	// 设置Parent
+	for _, n := range expectedNode.Child {
+		n.Parent = expectedNode
+	}
 
 	actualNode, err := core.JsonToBPlusTree(jsonData)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expJson := utils.ToJSON(expectedNode)
-	actJson := utils.ToJSON(actualNode)
-	if !reflect.DeepEqual(expJson, actJson) {
-		t.Errorf("Expected node %v, but got node %v", expJson, actJson)
+	if !actualNode.CompareBPlusTreeNodes(expectedNode) {
+		t.Errorf("Expected node %#v,\nbut got node %#v", expectedNode, actualNode)
+	} else {
+		tree := core.BPlusTree{
+			Root: actualNode,
+		}
+		tree.PrintBPlusTree()
 	}
 }
 
@@ -156,6 +161,10 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 			Parent: nil,
 		},
 		Order: 0,
+	}
+
+	for _, c := range expectedTree.Root.Child {
+		c.Parent = expectedTree.Root
 	}
 
 	actualTree, err := core.LoadBPlusTreeFromJson(jsonData)

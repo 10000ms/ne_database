@@ -248,6 +248,7 @@ func (tree *BPlusTree) Search(key int64) interface{} {
 
 // PrintBPlusTree 这个方法按照层级分行打印出B+树的每个节点的键值，方便查看B+树的结构。
 func (tree *BPlusTree) PrintBPlusTree() {
+	fmt.Printf("\n---**** PrintBPlusTree ****---\n")
 	queue := make([]*BPlusTreeNode, 0) // 队列存放节点
 	queue = append(queue, tree.Root)
 	level := 0             // 当前节点所在的层数
@@ -259,10 +260,10 @@ func (tree *BPlusTree) PrintBPlusTree() {
 		queue = queue[1:]      // 从队列中删除第一个节点
 		currentLevelCount -= 1 // 当前层级节点数量减1
 		if node != nil {
-			if level == 0 {
-				fmt.Printf("|%d|->", node.Keys)
+			if node.IsLeaf == true {
+				fmt.Printf("[leaf|%s|->%s], ", utils.ToJSON(node.Keys), utils.ToJSON(node.Values))
 			} else {
-				fmt.Printf("%v->", node.Keys)
+				fmt.Printf("[%s->%s], ", utils.ToJSON(node.Keys), utils.ToJSON(node.Values))
 			}
 			if len(node.Child) > 0 {
 				nextLevelCount += len(node.Child)
@@ -278,6 +279,8 @@ func (tree *BPlusTree) PrintBPlusTree() {
 			fmt.Printf("\nLevel %d:\n", level)
 		}
 	}
+	fmt.Printf("\n---**** END ****---\n")
+	fmt.Printf("\n")
 }
 
 // LoadBPlusTreeFromJson 用于加载整个B+树
@@ -325,7 +328,6 @@ func JsonToBPlusTree(jsonData []byte) (*BPlusTreeNode, error) {
 		return nil, fmt.Errorf("[JsonToBPlusTree] 缺失键：%s", JSONKeyValues)
 	}
 	if childDataArray, ok := data[JSONKeyChild].([]interface{}); ok {
-		node.Child = make([]*BPlusTreeNode, 0)
 		for _, childData := range childDataArray {
 			if childValue, ok := childData.(map[string]interface{}); ok {
 				child, err := JsonToBPlusTree([]byte(utils.ToJSON(childValue)))
@@ -334,13 +336,61 @@ func JsonToBPlusTree(jsonData []byte) (*BPlusTreeNode, error) {
 					return nil, err
 				}
 				child.Parent = node
-				node.Child = append(node.Child, node)
+				node.Child = append(node.Child, child)
 			} else {
 				return nil, fmt.Errorf("[JsonToBPlusTree] Invalid child data")
 			}
 		}
-	} else {
-		node.Child = make([]*BPlusTreeNode, 0)
 	}
 	return node, nil
+}
+
+func (tree *BPlusTree) CompareBPlusTrees(tree2 *BPlusTree) bool {
+	// 确保两个树都是空的
+	if (tree.Root == nil || tree2.Root == nil) && tree.Root != tree2.Root {
+		utils.LogDebug("[CompareBPlusTrees] 两树Root不同")
+		return false
+	}
+
+	// 如果阶数不同，则两个树不可能相同
+	if tree.Order != tree2.Order {
+		utils.LogDebug("[CompareBPlusTrees] 两树阶数不同")
+		return false
+	}
+
+	// 从对比两个树的根节点开始
+	return tree.Root.CompareBPlusTreeNodes(tree2.Root)
+}
+
+func (node *BPlusTreeNode) CompareBPlusTreeNodes(node2 *BPlusTreeNode) bool {
+	// 父节点不对比
+	// 因为对比一般自上而下，再去对比父节点无意义
+	// 单独对比的时候，再去对比父节点反而会影响判断
+
+	// 对比是否叶子节点
+	if node.IsLeaf != node2.IsLeaf {
+		utils.LogDebug("[CompareBPlusTreeNodes] 两节点IsLeaf不同")
+		return false
+	}
+
+	// 对比key
+	if utils.ToJSON(node.Keys) != utils.ToJSON(node2.Keys) {
+		utils.LogDebug("[CompareBPlusTreeNodes] 两节点Keys不同")
+		return false
+	}
+
+	// 对比value
+	if utils.ToJSON(node.Values) != utils.ToJSON(node2.Values) {
+		utils.LogDebug("[CompareBPlusTreeNodes] 两节点Values不同")
+		return false
+	}
+
+	// 对于每个叶子节点，比较它所属的两个子树是否相同
+	for i, childNode := range node.Child {
+		childNode2 := node2.Child[i]
+		if !childNode.CompareBPlusTreeNodes(childNode2) {
+			return false
+		}
+	}
+	return true
 }
