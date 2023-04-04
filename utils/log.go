@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -24,10 +25,16 @@ func log(level string, value []interface{}, color string) {
 		info += fmt.Sprintf("%s", i)
 	}
 	str := fmt.Sprintf("%s %s %s", dateString, level, info)
-	if color != "" {
-		str = fmt.Sprintf("\u001B[1;0;%sm%s\u001B[0m\n", color, str)
+
+	// 分行分割字符串后再打印
+	arr := strings.Split(str, "\n")
+	for _, line := range arr {
+		var lineStr string
+		if color != "" {
+			lineStr = fmt.Sprintf("\u001B[1;0;%sm%s\u001B[0m", color, line)
+		}
+		fmt.Println(lineStr)
 	}
-	fmt.Println(str)
 }
 
 func LogDebug(value ...interface{}) {
@@ -49,7 +56,9 @@ func LogError(value ...interface{}) {
 }
 
 func LogFatal(value ...interface{}) {
-	log("[FATAL]", value, "31")
+	color := "31"
+	log("[FATAL]", value, color)
+	log("", []interface{}{debug.Stack()}, color)
 }
 
 func LogSystem(value ...interface{}) {
