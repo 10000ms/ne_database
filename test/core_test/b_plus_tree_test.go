@@ -2,7 +2,6 @@ package core_test
 
 import (
 	"ne_database/utils"
-	"reflect"
 	"testing"
 
 	"ne_database/core"
@@ -132,11 +131,9 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 				  "price": 2.5
 				}
 			  ],
-			  "child": null,
-			  "parent": {}
+			  "child": null
 			}
-		  ],
-		  "parent": {}
+		  ]
 		}
 		`)
 	expectedTree := &core.BPlusTree{
@@ -172,7 +169,7 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(expectedTree, actualTree) {
+	if !expectedTree.CompareBPlusTrees(actualTree) {
 		t.Errorf("Expected tree %v, but got tree %v", expectedTree, actualTree)
 	}
 }
