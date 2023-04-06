@@ -248,6 +248,7 @@ func (tree *BPlusTree) Search(key int64) interface{} {
 
 // PrintBPlusTree 这个方法按照层级分行打印出B+树的每个节点的键值，方便查看B+树的结构。
 func (tree *BPlusTree) PrintBPlusTree() {
+	utils.LogDebug("PrintBPlusTree")
 	fmt.Printf("\n---**** PrintBPlusTree ****---\n")
 	queue := make([]*BPlusTreeNode, 0) // 队列存放节点
 	queue = append(queue, tree.Root)
