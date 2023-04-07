@@ -3,7 +3,9 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,6 +20,33 @@ const (
 	fgCyan
 	fgWhite
 )
+
+type logDevConfig struct {
+	IsInit      bool
+	InLogDev    bool
+	LowestLevel int
+	Modules     []string
+}
+
+func (l *logDevConfig) Init() {
+	l.InLogDev = os.Getenv("LOG_DEV") != ""
+
+	l.LowestLevel = -1
+	levelString := os.Getenv("LOG_DEV_LEVEL")
+	if levelString != "" {
+		l.LowestLevel, _ = strconv.Atoi(levelString)
+	}
+
+	l.Modules = make([]string, 0)
+	moduleString := os.Getenv("LOG_DEV_MODULES")
+	if moduleString != "" {
+		l.Modules = strings.Split(moduleString, ",")
+	}
+
+	l.IsInit = true
+}
+
+var logDevManger = logDevConfig{}
 
 func log(level string, value []interface{}, color int) {
 	now := time.Now()
@@ -60,8 +89,26 @@ func log(level string, value []interface{}, color int) {
 // LogDev 用于开发过程中的日志输出
 // 用法 utils.LogDev("BPlusTree", 1)("需要print的信息")
 func LogDev(module string, level int) func(...interface{}) {
-	// TODO：判断只有dev开启
-	// TODO：module、level都要进行判断，符合条件的才输出
+	if logDevManger.IsInit != true {
+		logDevManger.Init()
+	}
+	nilFunc := func(value ...interface{}) {}
+	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {
+		return nilFunc
+	}
+	if len(logDevManger.Modules) > 0 {
+		canModulePrint := false
+		for _, m := range logDevManger.Modules {
+			if module == m {
+				canModulePrint = true
+				break
+			}
+		}
+		if canModulePrint != true {
+			return nilFunc
+		}
+	}
+
 	return func(value ...interface{}) {
 		log("[Dev Info]", value, fgGreen)
 	}

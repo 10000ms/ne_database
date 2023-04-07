@@ -9,17 +9,21 @@ import (
 
 // BPlusTree B+树结构体
 type BPlusTree struct {
-	Root  *BPlusTreeNode // 根节点
-	Order int            // B+树的阶数
+	Root       *BPlusTreeNode // 根节点
+	Name       string         // B+树的名词，也是表名
+	LeafOrder  int            // 叶子节点的B+树的阶数
+	IndexOrder int            // 非叶子节点的B+树的阶数
 }
 
 type BPlusTreeNode struct {
-	IsLeaf bool             `json:"is_leaf"` // 是否为叶子节点
-	Keys   []int64          `json:"keys"`    // 键列表
-	Values []interface{}    `json:"values"`  // 值列表
-	Child  []*BPlusTreeNode `json:"child"`   // 子节点列表
-	Parent *BPlusTreeNode   `json:"parent"`  // 父节点
-	Offset int64            `json:"offset"`  // 该节点在硬盘中的偏移量
+	IsLeaf           bool          `json:"is_leaf"`            // 是否为叶子节点
+	KeysValueList    []int64       `json:"keys_value_list"`    // key的index，目前只支持int64的key，后面再变成interface{}
+	KeysOffsetList   []int64       `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
+	DataValues       []interface{} `json:"data_values"`        // 值列表
+	Offset           int64         `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
+	BeforeNodeOffset int64         `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
+	AfterNodeOffset  int64         `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
+	ParentOffset     int64         `json:"parent_offset"`      // 该节点父结点偏移量
 }
 
 // Insert 插入键值对
@@ -291,8 +295,9 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, error) {
 		return nil, err
 	}
 	tree := &BPlusTree{
-		Root:  root,
-		Order: 0, // 使用默认的阶数  FIXME：这里不能使用 0 作为阶数，进行功能验证会出现问题，需要加载真实的阶数
+		Root:       root,
+		LeafOrder:  0, // 使用默认的阶数  FIXME：这里不能使用 0 作为阶数，进行功能验证会出现问题，需要加载真实的阶数
+		IndexOrder: 0, // 使用默认的阶数  FIXME：这里不能使用 0 作为阶数，进行功能验证会出现问题，需要加载真实的阶数
 	}
 	return tree, nil
 }
