@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"ne_database/core/resource"
 	"ne_database/utils"
 )
 
 // BPlusTree B+树结构体
 type BPlusTree struct {
-	Root       *BPlusTreeNode // 根节点
-	Name       string         // B+树的名词，也是表名
-	LeafOrder  int            // 叶子节点的B+树的阶数
-	IndexOrder int            // 非叶子节点的B+树的阶数
+	Root           *BPlusTreeNode   // 根节点
+	Name           string           // B+树的名词，也是表名
+	LeafOrder      int              // 叶子节点的B+树的阶数
+	IndexOrder     int              // 非叶子节点的B+树的阶数
+	ResourceConfig *resource.Config // 资源文件的获取方法
 }
 
 type BPlusTreeNode struct {
@@ -24,6 +26,16 @@ type BPlusTreeNode struct {
 	BeforeNodeOffset int64         `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
 	AfterNodeOffset  int64         `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
 	ParentOffset     int64         `json:"parent_offset"`      // 该节点父结点偏移量
+}
+
+// LoadByteData 从[]byte数据中加载节点结构体
+func (tree *BPlusTree) LoadByteData(offset int64, data []byte) *BPlusTreeNode {
+	node := BPlusTreeNode{}
+	node.Offset = offset
+	// 1. 加载第一位，判断是否是叶子结点
+	// 2. 加载这个节点的相邻两个节点的偏移量(offset)
+	// 3. 加载这个节点的实际数据
+	return &node
 }
 
 // Insert 插入键值对
