@@ -51,7 +51,7 @@ func (tree *BPlusTree) LoadByteData(offset int64, data []byte) (*BPlusTreeNode, 
 	node.AfterNodeOffset, err = ByteListToInt64(data[len(data)-4:])
 	// 3. 加载这个节点的实际数据
 	data = data[5 : len(data)-4]
-	if node.IsLeaf {
+	if !node.IsLeaf {
 
 	} else {
 		node.DataValues = data
