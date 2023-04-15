@@ -29,13 +29,33 @@ type BPlusTreeNode struct {
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
-func (tree *BPlusTree) LoadByteData(offset int64, data []byte) *BPlusTreeNode {
-	node := BPlusTreeNode{}
+func (tree *BPlusTree) LoadByteData(offset int64, data []byte) (*BPlusTreeNode, error) {
+	var (
+		node = BPlusTreeNode{}
+		err  error
+	)
 	node.Offset = offset
+	// TODO: 校验 data 数据的长度
 	// 1. 加载第一位，判断是否是叶子结点
+	if data[0] == 1 {
+		node.IsLeaf = true
+	} else {
+		node.IsLeaf = false
+	}
 	// 2. 加载这个节点的相邻两个节点的偏移量(offset)
+	node.BeforeNodeOffset, err = ByteListToInt64(data[1:5])
+	if err != nil {
+		return nil, err
+	}
+	node.AfterNodeOffset, err = ByteListToInt64(data[len(data)-4:])
 	// 3. 加载这个节点的实际数据
-	return &node
+	data = data[5 : len(data)-4]
+	if node.IsLeaf {
+
+	} else {
+
+	}
+	return &node, nil
 }
 
 // Insert 插入键值对
