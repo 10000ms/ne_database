@@ -1,11 +1,15 @@
 package tableSchema
 
+type FieldInfo struct {
+	Name      string
+	Length    int
+	FieldType *MetaType
+}
+
 type TableMetaInfo struct {
-	Name             string
-	PrimaryKeyName   string
-	PrimaryKeyParser *MetaParser
-	ValueName        []string
-	ValueParserMap   map[string]*MetaParser
+	Name                string
+	PrimaryKeyFieldInfo *FieldInfo
+	ValueFieldInfo      []*FieldInfo
 }
 
 // InitTableMetaInfo

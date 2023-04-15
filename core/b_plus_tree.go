@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"ne_database/core/resource"
+	tableSchema "ne_database/core/table_schema"
 	"ne_database/utils"
 )
 
 // BPlusTree B+树结构体
 type BPlusTree struct {
-	Root           *BPlusTreeNode   // 根节点
-	Name           string           // B+树的名词，也是表名
-	LeafOrder      int              // 叶子节点的B+树的阶数
-	IndexOrder     int              // 非叶子节点的B+树的阶数
-	ResourceConfig *resource.Config // 资源文件的获取方法
+	Root           *BPlusTreeNode             // 根节点
+	TableInfo      *tableSchema.TableMetaInfo // B+树对应的表信息
+	LeafOrder      int                        // 叶子节点的B+树的阶数
+	IndexOrder     int                        // 非叶子节点的B+树的阶数
+	ResourceConfig *resource.Config           // 资源文件的获取方法
 }
 
 type BPlusTreeNode struct {
