@@ -19,14 +19,14 @@ type BPlusTree struct {
 }
 
 type BPlusTreeNode struct {
-	IsLeaf           bool          `json:"is_leaf"`            // 是否为叶子节点
-	KeysValueList    []int64       `json:"keys_value_list"`    // key的index，目前只支持int64的key，后面再变成interface{}
-	KeysOffsetList   []int64       `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
-	DataValues       []interface{} `json:"data_values"`        // 值列表
-	Offset           int64         `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
-	BeforeNodeOffset int64         `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
-	AfterNodeOffset  int64         `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
-	ParentOffset     int64         `json:"parent_offset"`      // 该节点父结点偏移量
+	IsLeaf           bool    `json:"is_leaf"`            // 是否为叶子节点
+	KeysValueList    []int64 `json:"keys_value_list"`    // key的index，目前只支持int64的key，后面再变成interface{}
+	KeysOffsetList   []int64 `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
+	DataValues       []byte  `json:"data_values"`        // 值列表
+	Offset           int64   `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
+	BeforeNodeOffset int64   `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
+	AfterNodeOffset  int64   `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
+	ParentOffset     int64   `json:"parent_offset"`      // 该节点父结点偏移量
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
@@ -54,7 +54,7 @@ func (tree *BPlusTree) LoadByteData(offset int64, data []byte) (*BPlusTreeNode, 
 	if node.IsLeaf {
 
 	} else {
-
+		node.DataValues = data
 	}
 	return &node, nil
 }
