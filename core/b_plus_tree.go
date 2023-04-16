@@ -9,6 +9,11 @@ import (
 	"ne_database/utils"
 )
 
+type ValueInfo struct {
+	Value []byte                `json:"value"` // 具体值
+	Type  *tableSchema.MetaType `json:"type"`  // 值类型
+}
+
 // BPlusTree B+树结构体
 type BPlusTree struct {
 	Root           *BPlusTreeNode             // 根节点
@@ -19,24 +24,80 @@ type BPlusTree struct {
 }
 
 type BPlusTreeNode struct {
-	IsLeaf           bool    `json:"is_leaf"`            // 是否为叶子节点
-	KeysValueList    []int64 `json:"keys_value_list"`    // key的index，目前只支持int64的key，后面再变成interface{}
-	KeysOffsetList   []int64 `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
-	DataValues       []byte  `json:"data_values"`        // 值列表
-	Offset           int64   `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
-	BeforeNodeOffset int64   `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
-	AfterNodeOffset  int64   `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
-	ParentOffset     int64   `json:"parent_offset"`      // 该节点父结点偏移量
+	IsLeaf           bool                    `json:"is_leaf"`            // 是否为叶子节点
+	KeysValueList    []*ValueInfo            `json:"keys_value_list"`    // key的index
+	KeysOffsetList   []int64                 `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
+	DataValues       []map[string]*ValueInfo `json:"data_values"`        // 值列表: map[值名]值
+	Offset           int64                   `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
+	BeforeNodeOffset int64                   `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
+	AfterNodeOffset  int64                   `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
+	ParentOffset     int64                   `json:"parent_offset"`      // 该节点父结点偏移量
+}
+
+type noLeafNodeByteDataReadLoopData struct {
+	Offset        int64  // offset
+	Value         []byte // 具体值
+	OffsetSuccess bool   // offset获取是否成功
+	ValueSuccess  bool   // value获取是否成功
+}
+
+// getNoLeafNodeByteDataReadLoopData
+func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyLength int) *noLeafNodeByteDataReadLoopData {
+	var (
+		r = noLeafNodeByteDataReadLoopData{}
+
+		loopLength = primaryKeyLength + DataByteLengthOffset
+		startIndex = loopLength * loopTime
+
+		err error
+	)
+	if len(data) < (startIndex + DataByteLengthOffset) {
+		// 判断基础的长度
+		return &r
+	}
+	offsetByte := data[startIndex : startIndex+DataByteLengthOffset]
+	r.Offset, err = ByteListToInt64(offsetByte)
+	if err != nil {
+		// TODO err要log一下
+		return &r
+	} else {
+		r.OffsetSuccess = true
+	}
+
+	r.ValueSuccess = len(data) >= startIndex+DataByteLengthOffset+primaryKeyLength
+	if r.ValueSuccess {
+		return &r
+	} else {
+		r.Value = data[startIndex+DataByteLengthOffset : startIndex+DataByteLengthOffset+primaryKeyLength]
+		return &r
+	}
+}
+
+func (tree *BPlusTree) LoadByteData(data map[int64][]byte) (map[int64]*BPlusTreeNode, error) {
+	if data == nil || len(data) == 0 {
+		return nil, fmt.Errorf("[BPlusTree LoadByteData] 输入数据内容不对")
+	}
+	r := make(map[int64]*BPlusTreeNode, 0)
+	for offset, pageData := range data {
+		n := BPlusTreeNode{}
+		err := n.LoadByteData(offset, tree.TableInfo, pageData)
+		if err != nil {
+			return nil, err
+		}
+		r[offset] = &n
+	}
+	return r, nil
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
-func (tree *BPlusTree) LoadByteData(offset int64, data []byte) (*BPlusTreeNode, error) {
+func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) error {
 	var (
-		node = BPlusTreeNode{}
-		err  error
+		err error
 	)
 	node.Offset = offset
-	// TODO: 校验 data 数据的长度
+	if len(data) != CoreConfig.PageSize {
+		return fmt.Errorf("[BPlusTreeNode LoadByteData] 输入数据长度不对")
+	}
 	// 1. 加载第一位，判断是否是叶子结点
 	if data[0] == 1 {
 		node.IsLeaf = true
@@ -46,17 +107,43 @@ func (tree *BPlusTree) LoadByteData(offset int64, data []byte) (*BPlusTreeNode, 
 	// 2. 加载这个节点的相邻两个节点的偏移量(offset)
 	node.BeforeNodeOffset, err = ByteListToInt64(data[1:5])
 	if err != nil {
-		return nil, err
+		return err
 	}
 	node.AfterNodeOffset, err = ByteListToInt64(data[len(data)-4:])
 	// 3. 加载这个节点的实际数据
 	data = data[5 : len(data)-4]
 	if !node.IsLeaf {
-
+		// 循环次数
+		loopTime := 0
+		// 运行数据
+		loopData := getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo.Length)
+		for true {
+			if node.KeysOffsetList == nil {
+				node.KeysOffsetList = make([]int64, 0)
+			}
+			if node.KeysValueList == nil {
+				node.KeysValueList = make([]*ValueInfo, 0)
+			}
+			// 先检查是否符合退出条件
+			if loopData.OffsetSuccess == false || loopData.ValueSuccess == false {
+				break
+			}
+			node.KeysOffsetList = append(node.KeysOffsetList, loopData.Offset)
+			fieldValue := loopData.Value
+			fieldType := *tableInfo.PrimaryKeyFieldInfo.FieldType
+			if fieldType.IsNull(fieldValue) {
+				break
+			}
+			v := ValueInfo{
+				Value: fieldValue,
+				Type:  &fieldType,
+			}
+			node.KeysValueList = append(node.KeysValueList, &v)
+		}
 	} else {
-		node.DataValues = data
+
 	}
-	return &node, nil
+	return nil
 }
 
 // Insert 插入键值对

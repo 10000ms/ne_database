@@ -1,5 +1,10 @@
 package tableSchema
 
+import (
+	"math"
+	"ne_database/core"
+)
+
 type DataTypeEnumeration int
 
 const (
@@ -9,18 +14,50 @@ const (
 
 type MetaType interface {
 	GetType() DataTypeEnumeration
+	IsNull(data []byte) bool
+	GetNull() []byte
 }
 
-type Int64Type struct {
+type int64Type struct {
 }
 
-func (t *Int64Type) GetType() DataTypeEnumeration {
+func (t *int64Type) GetType() DataTypeEnumeration {
 	return DataTypeInt64
 }
 
-type StringType struct {
+// IsNull : 0 在数据中是有含义的，这里用最小数来代表Null值
+func (t *int64Type) IsNull(data []byte) bool {
+	i, err := core.ByteListToInt64(data)
+	if err != nil {
+		return true
+	}
+	return i == int64(math.MinInt64)
 }
 
-func (t *StringType) GetType() DataTypeEnumeration {
+func (t *int64Type) GetNull() []byte {
+	nullValue := int64(math.MinInt64)
+	r, _ := core.Int64ToByteList(nullValue)
+	return r
+}
+
+type stringType struct {
+}
+
+func (t *stringType) GetType() DataTypeEnumeration {
 	return DataTypeString
 }
+
+func (t *stringType) IsNull(data []byte) bool {
+	str, _ := core.ByteListToString(data)
+	r := []rune(str)
+	return string(r[len(r)-1]) == ""
+}
+
+func (t *stringType) GetNull() []byte {
+	return []byte("")
+}
+
+var (
+	Int64Type  = int64Type{}
+	StringType = stringType{}
+)

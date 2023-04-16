@@ -2,7 +2,6 @@ package core
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"ne_database/utils"
 	"os"
 )
@@ -10,13 +9,14 @@ import (
 type config struct {
 	init bool
 
-	Dev bool `json:"Dev"`
+	Dev      bool `json:"Dev"`      // 是否处在开发模式
+	PageSize int  `json:"PageSize"` // 数据一页的大小
 }
 
 func (c *config) Init() error {
 	if c.init != true {
 		// 先给配置项初始值
-		c.Dev = false
+		c.InitToDefault()
 
 		// 再读取配置文件的值，覆盖初始值
 		var ConfigFilePath string
@@ -25,7 +25,7 @@ func (c *config) Init() error {
 			utils.LogSystem("获取到配置文件地址: %s")
 			utils.LogSystem("开始从配置文件加载配置信息...")
 
-			rawConfig, err := ioutil.ReadFile(ConfigFilePath)
+			rawConfig, err := os.ReadFile(ConfigFilePath)
 			if err != nil {
 				utils.LogFatal("获取不到配置文件！")
 				return err
@@ -40,6 +40,11 @@ func (c *config) Init() error {
 		c.init = true
 	}
 	return nil
+}
+
+func (c *config) InitToDefault() {
+	c.Dev = false
+	c.PageSize = 64000 // go中是按照byte计算的
 }
 
 var CoreConfig = config{}
