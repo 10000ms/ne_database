@@ -35,23 +35,35 @@ type BPlusTreeNode struct {
 }
 
 type noLeafNodeByteDataReadLoopData struct {
-	Offset        int64  // offset
-	Value         []byte // 具体值
-	OffsetSuccess bool   // offset获取是否成功
-	ValueSuccess  bool   // value获取是否成功
+	Offset            int64      // offset
+	PrimaryKey        *ValueInfo // 主键信息
+	OffsetSuccess     bool       // offset获取是否成功
+	PrimaryKeySuccess bool       // 主键信息获取是否成功
+}
+
+type leafNodeByteDataReadLoopData struct {
+	PrimaryKey        *ValueInfo            // 主键信息
+	Value             map[string]*ValueInfo // 具体值信息
+	PrimaryKeySuccess bool                  // 主键信息获取是否成功
+	ValueSuccess      bool                  // 具体值信息获取是否成功
 }
 
 // getNoLeafNodeByteDataReadLoopData
-func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyLength int) *noLeafNodeByteDataReadLoopData {
+// 最后一个offset也需要占用一个完整元素的位置
+func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo) *noLeafNodeByteDataReadLoopData {
 	var (
-		r = noLeafNodeByteDataReadLoopData{}
-
-		loopLength = primaryKeyLength + DataByteLengthOffset
-		startIndex = loopLength * loopTime
-
+		r   = noLeafNodeByteDataReadLoopData{}
 		err error
 	)
-	if len(data) < (startIndex + DataByteLengthOffset) {
+	if primaryKeyInfo == nil {
+		return &r
+	}
+	var (
+		loopLength = primaryKeyInfo.Length + DataByteLengthOffset
+		startIndex = loopLength * loopTime
+	)
+
+	if len(data) < (startIndex + loopLength) {
 		// 判断基础的长度
 		return &r
 	}
@@ -64,13 +76,77 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyLeng
 		r.OffsetSuccess = true
 	}
 
-	r.ValueSuccess = len(data) >= startIndex+DataByteLengthOffset+primaryKeyLength
-	if r.ValueSuccess {
+	lengthSuccess := len(data) >= startIndex+DataByteLengthOffset+primaryKeyInfo.Length
+	if !lengthSuccess {
 		return &r
 	} else {
-		r.Value = data[startIndex+DataByteLengthOffset : startIndex+DataByteLengthOffset+primaryKeyLength]
+		fieldValue := data[startIndex+DataByteLengthOffset : startIndex+DataByteLengthOffset+primaryKeyInfo.Length]
+		fieldType := *primaryKeyInfo.FieldType
+		if fieldType.IsNull(fieldValue) {
+			return &r
+		} else {
+			r.PrimaryKeySuccess = true
+			r.PrimaryKey = &ValueInfo{
+				Value: fieldValue,
+				Type:  primaryKeyInfo.FieldType,
+			}
+			return &r
+		}
+	}
+}
+
+// getLeafNodeByteDataReadLoopData
+func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo, valueInfo []*tableSchema.FieldInfo) *leafNodeByteDataReadLoopData {
+	var (
+		r          = leafNodeByteDataReadLoopData{}
+		loopLength int
+		startIndex int
+		valueIndex int
+	)
+	// 先进行合法性检查
+	if primaryKeyInfo == nil || valueInfo == nil || len(valueInfo) == 0 {
+		// TODO err要log一下
 		return &r
 	}
+	// 1. 计算长度, 开始的位置
+	loopLength += primaryKeyInfo.Length
+	for _, v := range valueInfo {
+		if v == nil {
+			// TODO err要log一下
+			return &r
+		}
+		loopLength += v.Length
+	}
+	startIndex = loopLength * loopTime
+	// 1.1 校验长度合法
+	if len(data) < (startIndex + loopLength) {
+		// 判断基础的长度
+		return &r
+	}
+	// 2. 先获取主键信息
+	pkValue := data[startIndex : startIndex+primaryKeyInfo.Length]
+	pkType := *primaryKeyInfo.FieldType
+	if !pkType.IsNull(pkValue) {
+		// TODO err要log一下
+		return &r
+	}
+	r.PrimaryKeySuccess = true
+	r.PrimaryKey = &ValueInfo{
+		Value: pkValue,
+		Type:  primaryKeyInfo.FieldType,
+	}
+	// 3. 获取各个值的信息
+	valueIndex += startIndex + primaryKeyInfo.Length
+	r.Value = make(map[string]*ValueInfo, 0)
+	for _, v := range valueInfo {
+		r.Value[v.Name] = &ValueInfo{
+			Value: data[startIndex+valueIndex : startIndex+valueIndex+v.Length],
+			Type:  v.FieldType,
+		}
+		valueIndex += v.Length
+	}
+	r.ValueSuccess = true
+	return &r
 }
 
 func (tree *BPlusTree) LoadByteData(data map[int64][]byte) (map[int64]*BPlusTreeNode, error) {
@@ -112,11 +188,11 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 	node.AfterNodeOffset, err = ByteListToInt64(data[len(data)-4:])
 	// 3. 加载这个节点的实际数据
 	data = data[5 : len(data)-4]
+	// 循环次数
+	loopTime := 0
 	if !node.IsLeaf {
-		// 循环次数
-		loopTime := 0
 		// 运行数据
-		loopData := getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo.Length)
+		loopData := getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
 		for true {
 			if node.KeysOffsetList == nil {
 				node.KeysOffsetList = make([]int64, 0)
@@ -125,23 +201,34 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 				node.KeysValueList = make([]*ValueInfo, 0)
 			}
 			// 先检查是否符合退出条件
-			if loopData.OffsetSuccess == false || loopData.ValueSuccess == false {
+			if loopData.OffsetSuccess == false {
 				break
 			}
 			node.KeysOffsetList = append(node.KeysOffsetList, loopData.Offset)
-			fieldValue := loopData.Value
-			fieldType := *tableInfo.PrimaryKeyFieldInfo.FieldType
-			if fieldType.IsNull(fieldValue) {
+			if loopData.PrimaryKeySuccess == false || loopData.PrimaryKey == nil {
 				break
 			}
-			v := ValueInfo{
-				Value: fieldValue,
-				Type:  &fieldType,
-			}
-			node.KeysValueList = append(node.KeysValueList, &v)
+			node.KeysValueList = append(node.KeysValueList, loopData.PrimaryKey)
+			loopData = getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
 		}
 	} else {
-
+		// 运行数据
+		loopData := getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
+		for true {
+			if node.KeysValueList == nil {
+				node.KeysValueList = make([]*ValueInfo, 0)
+			}
+			if node.DataValues == nil {
+				node.DataValues = make([]map[string]*ValueInfo, 0)
+			}
+			// 先检查是否符合退出条件
+			if loopData.PrimaryKeySuccess == false || loopData.ValueSuccess == false {
+				break
+			}
+			node.KeysValueList = append(node.KeysValueList, loopData.PrimaryKey)
+			node.DataValues = append(node.DataValues, loopData.Value)
+			loopData = getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
+		}
 	}
 	return nil
 }

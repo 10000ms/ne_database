@@ -13,8 +13,11 @@ const (
 )
 
 type MetaType interface {
+	// GetType 获取值类型
 	GetType() DataTypeEnumeration
+	// IsNull 判断值是否为空
 	IsNull(data []byte) bool
+	// GetNull 获取值的对应空值
 	GetNull() []byte
 }
 
