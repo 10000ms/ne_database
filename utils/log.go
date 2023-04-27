@@ -88,9 +88,15 @@ func log(level string, value []interface{}, color int) {
 
 // LogDev 用于开发过程中的日志输出
 // 用法 utils.LogDev("BPlusTree", 1)("需要print的信息")
+// level 只能是1-10
 func LogDev(module string, level int) func(...interface{}) {
 	if logDevManger.IsInit != true {
 		logDevManger.Init()
+	}
+	if level > 10 {
+		level = 10
+	} else if level < 1 {
+		level = 1
 	}
 	nilFunc := func(value ...interface{}) {}
 	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {

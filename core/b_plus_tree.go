@@ -50,13 +50,15 @@ type leafNodeByteDataReadLoopData struct {
 
 // getNoLeafNodeByteDataReadLoopData
 // 最后一个offset也需要占用一个完整元素的位置
-func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo) *noLeafNodeByteDataReadLoopData {
+func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo) (*noLeafNodeByteDataReadLoopData, StandardError) {
 	var (
 		r   = noLeafNodeByteDataReadLoopData{}
 		err error
 	)
 	if primaryKeyInfo == nil {
-		return &r
+		errMsg := "传入的 primaryKeyInfo 为空"
+		utils.LogError("[getNoLeafNodeByteDataReadLoopData] " + errMsg)
+		return &r, NewDBError(FunctionModelCoreBPlusTree, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
 	}
 	var (
 		loopLength = primaryKeyInfo.Length + DataByteLengthOffset
@@ -65,32 +67,36 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 
 	if len(data) < (startIndex + loopLength) {
 		// 判断基础的长度
-		return &r
+		utils.LogDev(string(FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 长度不够完成这轮解析，返回空")
+		return &r, nil
 	}
 	offsetByte := data[startIndex : startIndex+DataByteLengthOffset]
 	r.Offset, err = ByteListToInt64(offsetByte)
 	if err != nil {
-		// TODO err要log一下
-		return &r
+		utils.LogError("[getNoLeafNodeByteDataReadLoopData] 传入的 primaryKeyInfo 错误 ", err.Error())
+		return &r, NewDBError(FunctionModelCoreBPlusTree, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, err)
 	} else {
 		r.OffsetSuccess = true
 	}
 
 	lengthSuccess := len(data) >= startIndex+DataByteLengthOffset+primaryKeyInfo.Length
 	if !lengthSuccess {
-		return &r
+		utils.LogDev(string(FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 主键内容不够完成这轮解析，返回")
+		return &r, nil
 	} else {
 		fieldValue := data[startIndex+DataByteLengthOffset : startIndex+DataByteLengthOffset+primaryKeyInfo.Length]
 		fieldType := *primaryKeyInfo.FieldType
 		if fieldType.IsNull(fieldValue) {
-			return &r
+			utils.LogDev(string(FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 主键为空，返回")
+			return &r, nil
 		} else {
 			r.PrimaryKeySuccess = true
 			r.PrimaryKey = &ValueInfo{
 				Value: fieldValue,
 				Type:  primaryKeyInfo.FieldType,
 			}
-			return &r
+			utils.LogDev(string(FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
+			return &r, nil
 		}
 	}
 }
@@ -166,13 +172,16 @@ func (tree *BPlusTree) LoadByteData(data map[int64][]byte) (map[int64]*BPlusTree
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
-func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) error {
+func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) StandardError {
 	var (
-		err error
+		baseErr error
+		err     StandardError
 	)
 	node.Offset = offset
 	if len(data) != CoreConfig.PageSize {
-		return fmt.Errorf("[BPlusTreeNode LoadByteData] 输入数据长度不对")
+		errMsg := "输入数据长度不对"
+		utils.LogError("[BPlusTreeNode LoadByteData] " + errMsg)
+		return NewDBError(FunctionModelCoreBPlusTree, ErrorTypeInput, ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
 	}
 	// 1. 加载第一位，判断是否是叶子结点
 	if data[0] == 1 {
@@ -181,18 +190,22 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 		node.IsLeaf = false
 	}
 	// 2. 加载这个节点的相邻两个节点的偏移量(offset)
-	node.BeforeNodeOffset, err = ByteListToInt64(data[1:5])
-	if err != nil {
+	node.BeforeNodeOffset, baseErr = ByteListToInt64(data[1:5])
+	if baseErr != nil {
 		return err
 	}
-	node.AfterNodeOffset, err = ByteListToInt64(data[len(data)-4:])
+	node.AfterNodeOffset, baseErr = ByteListToInt64(data[len(data)-4:])
 	// 3. 加载这个节点的实际数据
 	data = data[5 : len(data)-4]
 	// 循环次数
 	loopTime := 0
 	if !node.IsLeaf {
 		// 运行数据
-		loopData := getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
+		loopData, err := getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
+		if err != nil {
+			utils.LogDev(string(FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.LoadByteData] getNoLeafNodeByteDataReadLoopData 出错, loopTime: <%d>", loopTime))
+			return err
+		}
 		for true {
 			if node.KeysOffsetList == nil {
 				node.KeysOffsetList = make([]int64, 0)
@@ -209,7 +222,11 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 				break
 			}
 			node.KeysValueList = append(node.KeysValueList, loopData.PrimaryKey)
-			loopData = getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
+			loopData, err = getNoLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo)
+			if err != nil {
+				utils.LogDev(string(FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.LoadByteData] getNoLeafNodeByteDataReadLoopData 出错, loopTime: <%d>", loopTime))
+				return err
+			}
 		}
 	} else {
 		// 运行数据
