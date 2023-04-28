@@ -10,6 +10,9 @@ const (
 	// OffsetNull 空offset对应的值
 	OffsetNull = int64(-1)
 
+	NodeTypeIsLeaf    = 1
+	NodeTypeIsNotLeaf = 0
+
 	// 模块
 	FunctionModelCoreBPlusTree      FunctionModel = "core.b_plus_tree"
 	FunctionModelCoreDataConversion FunctionModel = "core.data_conversion"
@@ -21,4 +24,5 @@ const (
 	// 错误代码
 	ErrorBaseCodeDefault             = "0001"
 	ErrorBaseCodeInnerParameterError = "inner_parameter_error"
+	ErrorBaseCodeInnerDataError      = "inner_data_error"
 )

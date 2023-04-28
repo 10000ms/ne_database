@@ -1,7 +1,6 @@
 package resource
 
-
 type Config interface {
-	Reader(offset int64) []byte
-	Writer(offset int64, data []byte) bool
+	Reader(offset int64) ([]byte, error)
+	Writer(offset int64, data []byte) (bool, error)
 }

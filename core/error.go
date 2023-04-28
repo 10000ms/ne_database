@@ -30,11 +30,11 @@ func (e *DBError) GetErrorType() ErrorType {
 }
 
 func (e *DBError) GetErrorCode() string {
-	return string(e.model) + string(e.errType) + string(e.errBaseCode)
+	return string(e.model) + " " + string(e.errType) + " " + string(e.errBaseCode)
 }
 
 func (e *DBError) PrintError() {
-	utils.LogError(fmt.Sprintf("Error: %s, 原始错误: %s", e.GetErrorType(), e.baseError.Error()))
+	utils.LogError(fmt.Sprintf("Error: %s, 原始错误: %s", e.GetErrorCode(), e.baseError.Error()))
 }
 
 func (e *DBError) Error() string {

@@ -16,14 +16,14 @@ func InitMemoryConfig(initData map[int64][]byte) *MemoryConfig {
 	return &c
 }
 
-func (c *MemoryConfig) Reader(offset int64) []byte {
+func (c *MemoryConfig) Reader(offset int64) ([]byte, error) {
 	if page, ok := c.Storage[offset]; ok {
-		return page
+		return page, nil
 	}
-	return nil
+	return make([]byte, 0), nil
 }
 
-func (c *MemoryConfig) Writer(offset int64, data []byte) bool {
+func (c *MemoryConfig) Writer(offset int64, data []byte) (bool, error) {
 	c.Storage[offset] = data
-	return true
+	return true, nil
 }

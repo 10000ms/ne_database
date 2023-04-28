@@ -1,6 +1,7 @@
 package tableSchema
 
 import (
+	"fmt"
 	"math"
 	"ne_database/core"
 )
@@ -19,6 +20,8 @@ type MetaType interface {
 	IsNull(data []byte) bool
 	// GetNull 获取值的对应空值
 	GetNull() []byte
+	// LogString 返回可读值
+	LogString([]byte) string
 }
 
 type int64Type struct {
@@ -43,6 +46,14 @@ func (t *int64Type) GetNull() []byte {
 	return r
 }
 
+func (t *int64Type) LogString(data []byte) string {
+	i, err := core.ByteListToInt64(data)
+	if err != nil {
+		return "错误的int64类型"
+	}
+	return fmt.Sprint(i)
+}
+
 type stringType struct {
 }
 
@@ -58,6 +69,10 @@ func (t *stringType) IsNull(data []byte) bool {
 
 func (t *stringType) GetNull() []byte {
 	return []byte("")
+}
+
+func (t *stringType) LogString(data []byte) string {
+	return string(data)
 }
 
 var (

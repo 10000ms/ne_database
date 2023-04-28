@@ -86,6 +86,11 @@ func log(level string, value []interface{}, color int) {
 	}
 }
 
+// NilLogFunc 空方法，不做任何操作
+func NilLogFunc(value ...interface{}) {
+
+}
+
 // LogDev 用于开发过程中的日志输出
 // 用法 utils.LogDev("BPlusTree", 1)("需要print的信息")
 // level 只能是1-10
@@ -98,9 +103,8 @@ func LogDev(module string, level int) func(...interface{}) {
 	} else if level < 1 {
 		level = 1
 	}
-	nilFunc := func(value ...interface{}) {}
 	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {
-		return nilFunc
+		return NilLogFunc
 	}
 	if len(logDevManger.Modules) > 0 {
 		canModulePrint := false
@@ -111,7 +115,7 @@ func LogDev(module string, level int) func(...interface{}) {
 			}
 		}
 		if canModulePrint != true {
-			return nilFunc
+			return NilLogFunc
 		}
 	}
 
