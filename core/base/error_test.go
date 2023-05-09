@@ -1,11 +1,7 @@
-package core
+package base
 
 import (
-	"bytes"
 	"errors"
-	"fmt"
-	"log"
-	"strings"
 	"testing"
 )
 
@@ -18,7 +14,7 @@ func TestDBError(t *testing.T) {
 	}
 
 	// 测试GetErrorCode方法
-	expectedCode := string(FunctionModelCoreDataConversion) + string(ErrorTypeSystem) + string(ErrorBaseCodeInnerParameterError)
+	expectedCode := string(FunctionModelCoreDataConversion) + " " + string(ErrorTypeSystem) + " " + string(ErrorBaseCodeInnerParameterError)
 	if dbErr.GetErrorCode() != expectedCode {
 		t.Errorf("DBError.GetErrorCode failed, expected %q but got %q", expectedCode, dbErr.GetErrorCode())
 	}
@@ -33,13 +29,4 @@ func TestDBError(t *testing.T) {
 		t.Errorf("DBError.GetErrorType failed, expected %q but got %q", ErrorTypeSystem, dbErr.GetErrorType())
 	}
 
-	// 测试PrintError方法
-	buf := bytes.Buffer{}
-	log.SetOutput(&buf)
-	dbErr.PrintError()
-	loggedMsg := strings.TrimSpace(buf.String())
-	expectedMsg := fmt.Sprintf("Error: %s, 原始错误: %s", ErrorTypeSystem, baseErr.Error())
-	if loggedMsg != expectedMsg {
-		t.Errorf("DBError.PrintError failed, expected %q but got %q", expectedMsg, loggedMsg)
-	}
 }

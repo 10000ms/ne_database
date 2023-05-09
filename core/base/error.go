@@ -1,7 +1,8 @@
-package core
+package base
 
 import (
 	"fmt"
+
 	"ne_database/utils"
 )
 

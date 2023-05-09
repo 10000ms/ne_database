@@ -1,11 +1,11 @@
 package resource
 
-type MemoryConfig struct {
+type MemoryManager struct {
 	Storage map[int64][]byte
 }
 
-func InitMemoryConfig(initData map[int64][]byte) *MemoryConfig {
-	c := MemoryConfig{}
+func InitMemoryConfig(initData map[int64][]byte) *MemoryManager {
+	c := MemoryManager{}
 
 	if initData != nil {
 		c.Storage = initData
@@ -16,14 +16,14 @@ func InitMemoryConfig(initData map[int64][]byte) *MemoryConfig {
 	return &c
 }
 
-func (c *MemoryConfig) Reader(offset int64) ([]byte, error) {
+func (c *MemoryManager) Reader(offset int64) ([]byte, error) {
 	if page, ok := c.Storage[offset]; ok {
 		return page, nil
 	}
 	return make([]byte, 0), nil
 }
 
-func (c *MemoryConfig) Writer(offset int64, data []byte) (bool, error) {
+func (c *MemoryManager) Writer(offset int64, data []byte) (bool, error) {
 	c.Storage[offset] = data
 	return true, nil
 }
