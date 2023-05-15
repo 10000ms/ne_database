@@ -86,7 +86,7 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 		return &r, nil
 	} else {
 		fieldValue := data[startIndex+base.DataByteLengthOffset : startIndex+base.DataByteLengthOffset+primaryKeyInfo.Length]
-		fieldType := *primaryKeyInfo.FieldType
+		fieldType := primaryKeyInfo.FieldType
 		if fieldType.IsNull(fieldValue) {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 主键为空，返回")
 			return &r, nil
@@ -94,7 +94,7 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 			r.PrimaryKeySuccess = true
 			r.PrimaryKey = &ValueInfo{
 				Value: fieldValue,
-				Type:  primaryKeyInfo.FieldType,
+				Type:  &primaryKeyInfo.FieldType,
 			}
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
 			return &r, nil
