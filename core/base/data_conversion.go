@@ -25,15 +25,13 @@ msb := ((b & (1 << 7)) >> 7) == 1
 	    fmt.Println("字节的最高有效位为0")
 	}
 
-
 若要计算n位数补码二进制对应的十进制，需要知道每位数对应的数字，除了最高比特外，其他比特的对应数字均和一般二进制相同，即第i位数表示数字2i−1。但最高比特若为1时，其表示数字为 -2n−1，因此若用此方式计算0000 0101表示的数字，其结果为：
 
 1111 1011 (−5) = −128 + 64 + 32 + 16 + 8 + 0 + 2 + 1 = (−27 + 26 + ...) = −5
-
 */
 func ByteListToInt64(data []byte) (int64, StandardError) {
 	if len(data) != DataByteLengthInt64 {
-		return 0, NewDBError(FunctionModelCoreDataConversion, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, fmt.Errorf("[ByteListToInt64], len(data) != 4, %#v", data))
+		return 0, NewDBError(FunctionModelCoreDataConversion, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, fmt.Errorf("[ByteListToInt64], len(data) != %d, %#v", DataByteLengthInt64, data))
 	}
 	var val int64
 	err := binary.Read(bytes.NewBuffer(data), binary.BigEndian, &val)
