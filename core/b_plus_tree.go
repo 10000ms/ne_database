@@ -135,7 +135,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	}
 	// 2. 先获取主键信息
 	pkValue := data[startIndex : startIndex+primaryKeyInfo.Length]
-	pkType := *primaryKeyInfo.FieldType
+	pkType := primaryKeyInfo.FieldType
 	if !pkType.IsNull(pkValue) {
 		errMsg := "主键数据为空"
 		utils.LogError("[getLeafNodeByteDataReadLoopData] " + errMsg)
@@ -144,7 +144,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	r.PrimaryKeySuccess = true
 	r.PrimaryKey = &ValueInfo{
 		Value: pkValue,
-		Type:  primaryKeyInfo.FieldType,
+		Type:  &primaryKeyInfo.FieldType,
 	}
 	// 3. 获取各个值的信息
 	valueIndex += startIndex + primaryKeyInfo.Length
@@ -152,7 +152,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	for _, v := range valueInfo {
 		r.Value[v.Name] = &ValueInfo{
 			Value: data[startIndex+valueIndex : startIndex+valueIndex+v.Length],
-			Type:  v.FieldType,
+			Type:  &v.FieldType,
 		}
 		valueIndex += v.Length
 	}
