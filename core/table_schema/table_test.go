@@ -57,3 +57,49 @@ func TestRawToFieldType(t *testing.T) {
 		t.Errorf("[RawToFieldType] expect error: %s, got err: %s", expErr, err)
 	}
 }
+
+// TODO 补充更多测试用例
+func TestInitTableMetaInfoByJson(t *testing.T) {
+	// 测试正常情况下能否正确解析 json 并返回 TableMetaInfo 实例
+	metaJson := `{"name":"users","primary_key_field_info":{"name":"id","raw_field_type":"int64","length":8},"value_field_info":[{"name":"name","raw_field_type":"string","length":50},{"name":"age","raw_field_type":"int64","length":8}]}`
+	expectedPKName := "id"
+	expectedValueFieldsCount := 2
+	meta, err := InitTableMetaInfoByJson(metaJson)
+	if err != nil {
+		t.Errorf("InitTableMetaInfoByJson should not return error, but got %v", err)
+	}
+	if meta.Name != "users" {
+		t.Errorf("Expected name to be 'users', but got %s", meta.Name)
+	}
+	if meta.PrimaryKeyFieldInfo.Name != expectedPKName {
+		t.Errorf("Expected primary key name to be %s, but got %s", expectedPKName, meta.PrimaryKeyFieldInfo.Name)
+	}
+	if len(meta.ValueFieldInfo) != expectedValueFieldsCount {
+		t.Errorf("Expected number of value fields to be %d, but got %d", expectedValueFieldsCount, len(meta.ValueFieldInfo))
+	}
+
+	// 测试无法解析 json 的情况下是否会返回错误
+	metaJson = `{1}`
+	_, err = InitTableMetaInfoByJson(metaJson)
+	if err == nil {
+		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
+	}
+	expErr := base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, nil)
+	if err.GetErrorCode() != expErr.GetErrorCode() {
+		t.Errorf("InitTableMetaInfoByJson should return error %s, but got %s", expErr.GetErrorCode(), err.GetErrorCode())
+	}
+
+	// 测试无法转换主键数据类型的情况下是否会返回错误
+	metaJson = `{"name":"users","primary_key_field_info":{"name":"id","raw_field_type":"unknown_type","length":8},"value_field_info":[{"name":"name","raw_field_type":"string","length":8},{"name":"age","raw_field_type":"int64","length":8}]}`
+	_, err = InitTableMetaInfoByJson(metaJson)
+	if err == nil {
+		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
+	}
+
+	// 测试无法转换值字段数据类型的情况下是否会返回错误
+	metaJson = `{"name": "users", "primaryKeyFieldInfo": {"name": "id", "rawFieldType": "int"}, "valueFieldInfo": [{"name": "name", "rawFieldType": "varchar"}, {"name": "age", "rawFieldType": "unknown_type"}]}`
+	_, err = InitTableMetaInfoByJson(metaJson)
+	if err == nil {
+		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
+	}
+}

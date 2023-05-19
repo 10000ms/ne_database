@@ -61,6 +61,10 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 		utils.LogError(fmt.Sprintf("[InitTableMetaInfoByJson] json解析错误: %s", er.Error()))
 		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
 	}
+	if r.PrimaryKeyFieldInfo == nil || r.ValueFieldInfo == nil || len(r.ValueFieldInfo) == 0 {
+		utils.LogError(fmt.Sprintf("[InitTableMetaInfoByJson] 表结构内容缺失, 获取json为: %s, 解析后为: %s", metaJson, utils.ToJSON(r)))
+		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
+	}
 	// 替换主键的 FieldType 为真实
 	pkFieldType, err := RawToFieldType(r.PrimaryKeyFieldInfo.RawFieldType)
 	if err != nil {
