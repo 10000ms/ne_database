@@ -12,13 +12,13 @@ type FieldInfo struct {
 	Name         string   `json:"name"`
 	Length       int      `json:"length"`
 	FieldType    MetaType `json:"-"`
-	RawFieldType string   `json:"raw_field_type"`
+	RawFieldType string   `json:"type"`
 }
 
 type TableMetaInfo struct {
 	Name                string       `json:"name"`
-	PrimaryKeyFieldInfo *FieldInfo   `json:"primary_key_field_info"`
-	ValueFieldInfo      []*FieldInfo `json:"value_field_info"`
+	PrimaryKeyFieldInfo *FieldInfo   `json:"primary_key"`
+	ValueFieldInfo      []*FieldInfo `json:"value"`
 }
 
 func (info *FieldInfo) Verification() base.StandardError {
