@@ -58,7 +58,6 @@ func TestRawToFieldType(t *testing.T) {
 	}
 }
 
-// TODO 补充更多测试用例
 func TestInitTableMetaInfoByJson(t *testing.T) {
 	// 测试正常情况下能否正确解析 json 并返回 TableMetaInfo 实例
 	metaJson := `{"name":"users","primary_key":{"name":"id","type":"int64","length":8},"value":[{"name":"name","type":"string","length":50},{"name":"age","type":"int64","length":8}]}`
