@@ -12,6 +12,7 @@ type FieldInfo struct {
 	Name         string   `json:"name"`
 	Length       int      `json:"length"`
 	FieldType    MetaType `json:"-"`
+	DefaultValue string   `json:"default"`
 	RawFieldType string   `json:"type"`
 }
 

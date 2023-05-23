@@ -43,7 +43,10 @@ func (t int64Type) GetNull() []byte {
 func (t int64Type) LogString(data []byte) string {
 	i, err := base.ByteListToInt64(data)
 	if err != nil {
-		return "错误的int64类型"
+		return base.LogStringErrorValue
+	}
+	if t.IsNull(data) {
+		return base.LogStringNullValue
 	}
 	return fmt.Sprint(i)
 }
@@ -56,16 +59,17 @@ func (t stringType) GetType() base.DBDataTypeEnumeration {
 }
 
 func (t stringType) IsNull(data []byte) bool {
-	str, _ := base.ByteListToString(data)
-	r := []rune(str)
-	return string(r[len(r)-1]) == ""
+	return data[len(data)-1] == 0x00
 }
 
 func (t stringType) GetNull() []byte {
-	return []byte("")
+	return []byte{0x00}
 }
 
 func (t stringType) LogString(data []byte) string {
+	if t.IsNull(data) {
+		return base.LogStringNullValue
+	}
 	return string(data)
 }
 
