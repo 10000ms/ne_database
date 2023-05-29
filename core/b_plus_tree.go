@@ -49,6 +49,15 @@ type leafNodeByteDataReadLoopData struct {
 	ValueSuccess      bool                  // 具体值信息获取是否成功
 }
 
+// BPlusTreeJSON B+树 JSON中间结构体
+type BPlusTreeJSON struct {
+	Root         *BPlusTreeNode   `json:"root_node"`   // 根节点
+	ValueNode    []*BPlusTreeNode `json:"value_node"`  // 值节点
+	RawTableInfo interface{}      `json:"table_info"`  // B+树对应的表信息
+	LeafOrder    int              `json:"leaf_order"`  // 叶子节点的B+树的阶数
+	IndexOrder   int              `json:"index_order"` // 非叶子节点的B+树的阶数
+}
+
 // getNoLeafNodeByteDataReadLoopData
 // 最后一个offset也需要占用一个完整元素的位置
 func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo) (*noLeafNodeByteDataReadLoopData, base.StandardError) {
@@ -691,21 +700,37 @@ func (tree *BPlusTree) PrintBPlusTree() base.StandardError {
 }
 
 // LoadBPlusTreeFromJson 用于加载整个B+树
-func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, error) {
+func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
+	var (
+		tree     = BPlusTree{}
+		jsonTree = BPlusTreeJSON{}
+	)
+
+	if err := json.Unmarshal(jsonData, &jsonTree); err != nil {
+		utils.LogError("[NodeToByteData] json.Unmarshal error: " + err.Error())
+		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, err)
+	}
+
+	// 1. 处理table info
+	tableInfo, err := tableSchema.InitTableMetaInfoByJson(utils.ToJSON(jsonTree.RawTableInfo))
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.tableSchema.InitTableMetaInfoByJson]错误: %s", err.Error()))
+		return nil, err
+	}
+	tree.TableInfo = tableInfo
+
+	// TODO
+
 	root, err := JsonToBPlusTree(jsonData)
 	if err != nil {
 		return nil, err
-	}
-	tree := &BPlusTree{
-		Root:       root,
-		LeafOrder:  0, // 使用默认的阶数  FIXME：这里不能使用 0 作为阶数，进行功能验证会出现问题，需要加载真实的阶数
-		IndexOrder: 0, // 使用默认的阶数  FIXME：这里不能使用 0 作为阶数，进行功能验证会出现问题，需要加载真实的阶数
 	}
 	return tree, nil
 }
 
 // JsonToBPlusTree 用于将JSON数据转换为B+树的节点
 func JsonToBPlusTree(jsonData []byte) (*BPlusTreeNode, error) {
+
 	var data map[string]interface{}
 	if err := json.Unmarshal(jsonData, &data); err != nil {
 		return nil, err
