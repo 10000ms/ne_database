@@ -20,6 +20,8 @@ type MetaType interface {
 	LogString([]byte) string
 	// StringToByte 可读值转化为储存值
 	StringToByte(string) ([]byte, base.StandardError)
+	// LengthPadding 长度填充
+	LengthPadding([]byte, int) ([]byte, base.StandardError)
 }
 
 type int64Type struct {
@@ -72,6 +74,14 @@ func (t int64Type) StringToByte(data string) ([]byte, base.StandardError) {
 	return byteValue, nil
 }
 
+func (t int64Type) LengthPadding(waitHandleData []byte, length int) ([]byte, base.StandardError) {
+	if len(waitHandleData) != base.DataByteLengthInt64 {
+		utils.LogError(fmt.Sprintf("[int64Type.LengthPadding] err: int64 数据长度不对"))
+		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("int64 数据长度不对"))
+	}
+	return waitHandleData, nil
+}
+
 type stringType struct {
 }
 
@@ -80,7 +90,10 @@ func (t stringType) GetType() base.DBDataTypeEnumeration {
 }
 
 func (t stringType) IsNull(data []byte) bool {
-	return data[len(data)-1] == 0x00
+	if data != nil && len(data) > 0 {
+		return data[0] == 0x00
+	}
+	return true
 }
 
 func (t stringType) GetNull() []byte {
@@ -104,6 +117,14 @@ func (t stringType) StringToByte(data string) ([]byte, base.StandardError) {
 		return nil, er
 	}
 	return byteValue, nil
+}
+
+func (t stringType) LengthPadding(waitHandleData []byte, length int) ([]byte, base.StandardError) {
+	if len(waitHandleData) == length {
+		return waitHandleData, nil
+	}
+	padding := make([]byte, length-len(waitHandleData))
+	return append(waitHandleData, padding...), nil
 }
 
 var (
