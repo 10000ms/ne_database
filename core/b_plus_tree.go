@@ -12,7 +12,6 @@ import (
 
 type ValueInfo struct {
 	Value []byte                `json:"value"` // 具体值
-	Type  *tableSchema.MetaType `json:"type"`  // 值类型
 }
 
 // BPlusTree B+树结构体
@@ -26,9 +25,9 @@ type BPlusTree struct {
 
 type BPlusTreeNode struct {
 	IsLeaf           bool                    `json:"is_leaf"`            // 是否为叶子节点
-	KeysValueList    []*ValueInfo            `json:"keys_value_list"`    // key的index
+	KeysValueList    []*ValueInfo            `json:"-"`                  // key的index
 	KeysOffsetList   []int64                 `json:"keys_offset_list"`   // index对应的子节点的offset列表，长度比KeysValueList +1，最后一个是尾部的offset
-	DataValues       []map[string]*ValueInfo `json:"data_values"`        // 值列表: map[值名]值
+	DataValues       []map[string]*ValueInfo `json:"-"`                  // 值列表: map[值名]值
 	Offset           int64                   `json:"offset"`             // 该节点在硬盘文件中的偏移量，也是该节点的id
 	BeforeNodeOffset int64                   `json:"before_node_offset"` // 该节点相连的前一个结点的偏移量
 	AfterNodeOffset  int64                   `json:"after_node_offset"`  // 该节点相连的后一个结点的偏移量
@@ -49,13 +48,36 @@ type leafNodeByteDataReadLoopData struct {
 	ValueSuccess      bool                  // 具体值信息获取是否成功
 }
 
+type BPlusTreeNodeJSON struct {
+	BPlusTreeNode
+	KeysStringValue  []string            `json:"keys_value"`  // key的index
+	DataStringValues []map[string]string `json:"data_values"` // 值列表: map[值名]值
+}
+
 // BPlusTreeJSON B+树 JSON中间结构体
 type BPlusTreeJSON struct {
-	Root         *BPlusTreeNode   `json:"root_node"`   // 根节点
-	ValueNode    []*BPlusTreeNode `json:"value_node"`  // 值节点
-	RawTableInfo interface{}      `json:"table_info"`  // B+树对应的表信息
-	LeafOrder    int              `json:"leaf_order"`  // 叶子节点的B+树的阶数
-	IndexOrder   int              `json:"index_order"` // 非叶子节点的B+树的阶数
+	Root         *BPlusTreeNodeJSON   `json:"root_node"`   // 根节点
+	ValueNode    []*BPlusTreeNodeJSON `json:"value_node"`  // 值节点
+	RawTableInfo interface{}          `json:"table_info"`  // B+树对应的表信息
+	LeafOrder    int                  `json:"leaf_order"`  // 叶子节点的B+树的阶数
+	IndexOrder   int                  `json:"index_order"` // 非叶子节点的B+树的阶数
+}
+
+func (n *BPlusTreeNodeJSON) JSONTypeToOriginalType() *BPlusTreeNode {
+	return &BPlusTreeNode{
+		IsLeaf:           n.IsLeaf,
+		KeysValueList:    n.KeysValueList,
+		KeysOffsetList:   n.KeysOffsetList,
+		DataValues:       n.DataValues,
+		Offset:           n.Offset,
+		BeforeNodeOffset: n.BeforeNodeOffset,
+		AfterNodeOffset:  n.AfterNodeOffset,
+		ParentOffset:     n.ParentOffset,
+	}
+}
+
+func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(keyFieldInfo *tableSchema.FieldInfo, valueFieldInfo []*tableSchema.FieldInfo) {
+	// TODO KeysStringValue, DataStringValues 转化到对应的 ValueInfo。长度不足的要补0
 }
 
 // getNoLeafNodeByteDataReadLoopData
@@ -103,7 +125,6 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 			r.PrimaryKeySuccess = true
 			r.PrimaryKey = &ValueInfo{
 				Value: fieldValue,
-				Type:  &primaryKeyInfo.FieldType,
 			}
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
 			return &r, nil
@@ -153,7 +174,6 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	r.PrimaryKeySuccess = true
 	r.PrimaryKey = &ValueInfo{
 		Value: pkValue,
-		Type:  &primaryKeyInfo.FieldType,
 	}
 	// 3. 获取各个值的信息
 	valueIndex += startIndex + primaryKeyInfo.Length
@@ -161,7 +181,6 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	for _, v := range valueInfo {
 		r.Value[v.Name] = &ValueInfo{
 			Value: data[startIndex+valueIndex : startIndex+valueIndex+v.Length],
-			Type:  &v.FieldType,
 		}
 		valueIndex += v.Length
 	}
@@ -719,7 +738,9 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	}
 	tree.TableInfo = tableInfo
 
-	// TODO
+	// 2. 处理root node
+	rootNode := jsonTree.Root
+	rootNode.
 
 	root, err := JsonToBPlusTree(jsonData)
 	if err != nil {

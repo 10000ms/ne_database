@@ -3,6 +3,8 @@ package tableSchema
 import (
 	"fmt"
 	"math"
+	"ne_database/utils"
+	"strconv"
 
 	"ne_database/core/base"
 )
@@ -16,6 +18,8 @@ type MetaType interface {
 	GetNull() []byte
 	// LogString 返回可读值
 	LogString([]byte) string
+	// StringToByte 可读值转化为储存值
+	StringToByte(string) ([]byte, base.StandardError)
 }
 
 type int64Type struct {
@@ -43,12 +47,29 @@ func (t int64Type) GetNull() []byte {
 func (t int64Type) LogString(data []byte) string {
 	i, err := base.ByteListToInt64(data)
 	if err != nil {
-		return base.LogStringErrorValue
+		return base.ValueStringErrorValue
 	}
 	if t.IsNull(data) {
-		return base.LogStringNullValue
+		return base.ValueStringNullValue
 	}
 	return fmt.Sprint(i)
+}
+
+func (t int64Type) StringToByte(data string) ([]byte, base.StandardError) {
+	if data == base.ValueStringNullValue {
+		return t.GetNull(), nil
+	}
+	int64Value, err := strconv.ParseInt(data, 10, 64)
+	if err != nil {
+		utils.LogError(fmt.Sprintf("[int64Type.StringToByte.strconv.ParseInt] err: %s", err.Error()))
+		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, err)
+	}
+	byteValue, er := base.Int64ToByteList(int64Value)
+	if er != nil {
+		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[int64Type.StringToByte.base.Int64ToByteList] err: %s", err.Error()))
+		return nil, er
+	}
+	return byteValue, nil
 }
 
 type stringType struct {
@@ -68,9 +89,21 @@ func (t stringType) GetNull() []byte {
 
 func (t stringType) LogString(data []byte) string {
 	if t.IsNull(data) {
-		return base.LogStringNullValue
+		return base.ValueStringNullValue
 	}
 	return string(data)
+}
+
+func (t stringType) StringToByte(data string) ([]byte, base.StandardError) {
+	if data == base.ValueStringNullValue {
+		return t.GetNull(), nil
+	}
+	byteValue, er := base.StringToByteList(data)
+	if er != nil {
+		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[stringType.StringToByte.base.StringToByteList] err: %s", er.Error()))
+		return nil, er
+	}
+	return byteValue, nil
 }
 
 var (

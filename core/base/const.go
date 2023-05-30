@@ -13,8 +13,8 @@ const (
 	NodeTypeIsLeaf    = 1
 	NodeTypeIsNotLeaf = 0
 
-	LogStringNullValue  = "Null"
-	LogStringErrorValue = "Error"
+	ValueStringNullValue  = "Null"
+	ValueStringErrorValue = "Error"
 
 	// 字段类型
 	DBDataTypeInt64  DBDataTypeEnumeration = "int64"
