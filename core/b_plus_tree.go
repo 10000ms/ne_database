@@ -11,7 +11,7 @@ import (
 )
 
 type ValueInfo struct {
-	Value []byte                `json:"value"` // 具体值
+	Value []byte `json:"value"` // 具体值
 }
 
 // BPlusTree B+树结构体
@@ -20,7 +20,7 @@ type BPlusTree struct {
 	TableInfo       *tableSchema.TableMetaInfo // B+树对应的表信息
 	LeafOrder       int                        // 叶子节点的B+树的阶数
 	IndexOrder      int                        // 非叶子节点的B+树的阶数
-	ResourceManager *resource.IOManager        // 资源文件的获取方法
+	ResourceManager resource.IOManager         // 资源文件的获取方法
 }
 
 type BPlusTreeNode struct {
@@ -76,8 +76,76 @@ func (n *BPlusTreeNodeJSON) JSONTypeToOriginalType() *BPlusTreeNode {
 	}
 }
 
-func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(keyFieldInfo *tableSchema.FieldInfo, valueFieldInfo []*tableSchema.FieldInfo) {
-	// TODO KeysStringValue, DataStringValues 转化到对应的 ValueInfo。长度不足的要补0
+func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(tableInfo *tableSchema.TableMetaInfo) base.StandardError {
+	if n.KeysStringValue != nil && len(n.KeysStringValue) > 0 {
+		n.KeysValueList = make([]*ValueInfo, 0)
+		toByteFunc := tableInfo.PrimaryKeyFieldInfo.FieldType.StringToByte
+		lengthPaddingFunc := tableInfo.PrimaryKeyFieldInfo.FieldType.LengthPadding
+		for _, stringValue := range n.KeysStringValue {
+			byteValue, err := toByteFunc(stringValue)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)("[GetValueAndKeyInfo] 获取key的byte值错误")
+				return err
+			}
+			byteValue, err = lengthPaddingFunc(byteValue, tableInfo.PrimaryKeyFieldInfo.Length)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)("[GetValueAndKeyInfo] 补长key的byte值错误")
+				return err
+			}
+			n.KeysValueList = append(n.KeysValueList, &ValueInfo{
+				Value: byteValue,
+			})
+		}
+	}
+	if n.DataStringValues != nil && len(n.DataStringValues) > 0 {
+		n.DataValues = make([]map[string]*ValueInfo, 0)
+		valueFieldInfoMap, err := tableInfo.ValueFieldInfoMap()
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[GetValueAndKeyInfo] 获取 key info map 错误: %s", err.Error()))
+			return err
+		}
+		n.DataValues = make([]map[string]*ValueInfo, 0)
+		for _, row := range n.DataStringValues {
+			rowValue := make(map[string]*ValueInfo, 0)
+			if row != nil && len(row) != 0 {
+				// 表声明中有的每一个值都应该有信息
+				if len(row) != len(valueFieldInfoMap) {
+					errMsg := fmt.Sprintf("值数量和表声明中的值数量不对！")
+					utils.LogError(fmt.Sprintf("[GetValueAndKeyInfo] %s", errMsg))
+					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+				}
+				for key, stringValue := range row {
+					if valueInfo, ok := valueFieldInfoMap[key]; ok {
+						toByteFunc := valueInfo.FieldType.StringToByte
+						lengthPaddingFunc := valueInfo.FieldType.LengthPadding
+						byteValue, err := toByteFunc(stringValue)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[GetValueAndKeyInfo] 获取值<%s>的byte值错误", key))
+							return err
+						}
+						byteValue, err = lengthPaddingFunc(byteValue, tableInfo.PrimaryKeyFieldInfo.Length)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[GetValueAndKeyInfo] 补长值<%s>的byte值错误", key))
+							return err
+						}
+						rowValue[key] = &ValueInfo{
+							Value: byteValue,
+						}
+					} else {
+						errMsg := fmt.Sprintf("值名称: <%s> 没有出现在表配置当中", key)
+						utils.LogError(fmt.Sprintf("[GetValueAndKeyInfo] %s", errMsg))
+						return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+					}
+				}
+			} else {
+				errMsg := "值内容为空"
+				utils.LogError(fmt.Sprintf("[GetValueAndKeyInfo] %s", errMsg))
+				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+			}
+			n.DataValues = append(n.DataValues, rowValue)
+		}
+	}
+	return nil
 }
 
 // getNoLeafNodeByteDataReadLoopData
@@ -208,7 +276,7 @@ func (tree *BPlusTree) LoadByteData(data map[int64][]byte) (map[int64]*BPlusTree
 }
 
 func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.StandardError) {
-	rm := *tree.ResourceManager
+	rm := tree.ResourceManager
 	nodeData, er := rm.Reader(offset)
 	if er != nil {
 		utils.LogError("[BPlusTreeNode OffsetToNode Reader] 读取数据错误 " + er.Error())
@@ -740,63 +808,54 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 
 	// 2. 处理root node
 	rootNode := jsonTree.Root
-	rootNode.
-
-	root, err := JsonToBPlusTree(jsonData)
+	if rootNode == nil {
+		errMsg := "rootNode 为空"
+		utils.LogError("[NodeToByteData] %s", errMsg)
+		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	}
+	err = rootNode.GetValueAndKeyInfo(tableInfo)
 	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.rootNode.GetValueAndKeyInfo]错误: %s", err.Error()))
 		return nil, err
 	}
-	return tree, nil
+	tree.Root = rootNode.JSONTypeToOriginalType()
+
+	// 3. 处理非 root 的每个 node
+	if jsonTree.ValueNode == nil || len(jsonTree.ValueNode) == 0 {
+		errMsg := "jsonTree.ValueNode 为空"
+		utils.LogError("[NodeToByteData] %s", errMsg)
+		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	}
+	resourceMap := make(map[int64][]byte, 0)
+	for _, node := range jsonTree.ValueNode {
+		if node == nil {
+			errMsg := "node 为空"
+			utils.LogError("[NodeToByteData] %s", errMsg)
+			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+		}
+		err = node.GetValueAndKeyInfo(tableInfo)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo]错误: %s", err.Error()))
+			return nil, err
+		}
+		originalNode := node.JSONTypeToOriginalType()
+		byteData, err := originalNode.NodeToByteData()
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
+			return nil, err
+		}
+		resourceMap[originalNode.Offset] = byteData
+	}
+
+	// 4. json加载的表, 添加使用的内存数据引擎
+	manager := resource.InitMemoryConfig(resourceMap)
+	tree.ResourceManager = manager
+
+	return &tree, nil
 }
 
-// JsonToBPlusTree 用于将JSON数据转换为B+树的节点
-func JsonToBPlusTree(jsonData []byte) (*BPlusTreeNode, error) {
-
-	var data map[string]interface{}
-	if err := json.Unmarshal(jsonData, &data); err != nil {
-		return nil, err
-	}
-	node := &BPlusTreeNode{
-		IsLeaf: false,
-		Keys:   make([]int64, 0),
-		Values: make([]interface{}, 0),
-		Child:  make([]*BPlusTreeNode, 0),
-		Parent: nil,
-	}
-	if _, ok := data[JSONKeyIsLeaf]; ok {
-		node.IsLeaf = data[JSONKeyIsLeaf].(bool)
-	} else {
-		return nil, fmt.Errorf("[JsonToBPlusTree] 缺失键：%s", JSONKeyIsLeaf)
-	}
-	if _, ok := data[JSONKeyKeys]; ok {
-		node.Keys = make([]int64, len(data[JSONKeyKeys].([]interface{})))
-		for i, key := range data[JSONKeyKeys].([]interface{}) {
-			node.Keys[i] = int64(key.(float64))
-		}
-	} else {
-		return nil, fmt.Errorf("[JsonToBPlusTree] 缺失键：%s", JSONKeyKeys)
-	}
-	if _, ok := data[JSONKeyValues]; ok {
-		node.Values = data[JSONKeyValues].([]interface{})
-	} else {
-		return nil, fmt.Errorf("[JsonToBPlusTree] 缺失键：%s", JSONKeyValues)
-	}
-	if childDataArray, ok := data[JSONKeyChild].([]interface{}); ok {
-		for _, childData := range childDataArray {
-			if childValue, ok := childData.(map[string]interface{}); ok {
-				child, err := JsonToBPlusTree([]byte(utils.ToJSON(childValue)))
-				if err != nil {
-					utils.LogError(err)
-					return nil, err
-				}
-				child.Parent = node
-				node.Child = append(node.Child, child)
-			} else {
-				return nil, fmt.Errorf("[JsonToBPlusTree] Invalid child data")
-			}
-		}
-	}
-	return node, nil
+func (tree *BPlusTree) BPlusTreeToJson() string {
+	return ""
 }
 
 func (tree *BPlusTree) CompareBPlusTrees(tree2 *BPlusTree) bool {

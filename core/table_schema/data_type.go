@@ -123,6 +123,10 @@ func (t stringType) LengthPadding(waitHandleData []byte, length int) ([]byte, ba
 	if len(waitHandleData) == length {
 		return waitHandleData, nil
 	}
+	if len(waitHandleData) > length {
+		utils.LogError(fmt.Sprintf("[stringType.LengthPadding] err: string 数据长度不对"))
+		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("string 数据长度不对"))
+	}
 	padding := make([]byte, length-len(waitHandleData))
 	return append(waitHandleData, padding...), nil
 }

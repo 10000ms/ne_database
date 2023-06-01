@@ -6,6 +6,7 @@ import (
 
 	"ne_database/core/base"
 	"ne_database/utils"
+	"ne_database/utils/set"
 )
 
 type FieldInfo struct {
@@ -22,6 +23,54 @@ type TableMetaInfo struct {
 	ValueFieldInfo      []*FieldInfo `json:"value"`
 }
 
+func (info *TableMetaInfo) ValueFieldInfoMap() (map[string]*FieldInfo, base.StandardError) {
+	valueFieldInfoMap := make(map[string]*FieldInfo)
+	for _, i := range info.ValueFieldInfo {
+		valueFieldInfoMap[i.Name] = i
+	}
+	return valueFieldInfoMap, nil
+}
+
+// Verification 表配置校验
+func (info *TableMetaInfo) Verification() base.StandardError {
+	if info.Name == "" {
+		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 表名为空"))
+		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("表名为空"))
+	}
+	if info.PrimaryKeyFieldInfo == nil {
+		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 主键配置为空"))
+		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("主键配置为空"))
+	}
+	err := info.PrimaryKeyFieldInfo.Verification()
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 primaryKey info Verification 出错, %s", err.Error()))
+		return err
+	}
+	if info.ValueFieldInfo == nil || len(info.ValueFieldInfo) == 0 {
+		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
+		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
+	}
+	existName := set.NewStringSet()
+	for _, i := range info.ValueFieldInfo {
+		if i == nil {
+			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
+			return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
+		}
+		err := i.Verification()
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
+			return err
+		}
+		if existName.Contains(i.Name) {
+			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置名<%s>重复", i.Name))
+			return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置名<%s>重复", i.Name))
+		}
+		existName.Add(i.Name)
+	}
+	return nil
+}
+
+// Verification 值配置校验
 func (info *FieldInfo) Verification() base.StandardError {
 	t := info.FieldType
 	switch t.GetType() {
@@ -92,6 +141,12 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 			utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value.Verification出错, %s", err.Error()))
 			return nil, err
 		}
+	}
+
+	err = r.Verification()
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] table.Verification出错, %s", err.Error()))
+		return nil, err
 	}
 
 	return r, nil
