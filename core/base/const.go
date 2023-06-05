@@ -23,16 +23,21 @@ const (
 	// 模块
 	FunctionModelCoreBPlusTree      FunctionModel = "core.b_plus_tree"
 	FunctionModelCoreDataConversion FunctionModel = "core.data_conversion"
-	FunctionModelCoreDTableSchema   FunctionModel = "core.table_schema"
+	FunctionModelCoreTableSchema    FunctionModel = "core.table_schema"
+	FunctionModelCoreResource       FunctionModel = "core.resource"
 
 	// 错误类型
 	ErrorTypeSystem ErrorType = "error.system"
 	ErrorTypeInput  ErrorType = "error.input"
 	ErrorTypeType   ErrorType = "error.type"
+	ErrorTypeIO     ErrorType = "error.io"
 
 	// 错误代码
-	ErrorBaseCodeDefault             = "0001"
+	ErrorBaseCodeDefault             = "default"
 	ErrorBaseCodeParameterError      = "parameter_error"
 	ErrorBaseCodeInnerParameterError = "inner_parameter_error"
 	ErrorBaseCodeInnerDataError      = "inner_data_error"
+	ErrorBaseCodeInnerTypeError      = "inner_type_error"
+	ErrorBaseCodeIOError             = "io"
+	ErrorBaseCodeNetworkError        = "network"
 )

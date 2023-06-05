@@ -1,6 +1,7 @@
 package core
 
 import (
+	"os"
 	"testing"
 
 	tableSchema "ne_database/core/table_schema"
@@ -36,7 +37,309 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	if string(result.PrimaryKey.Value) != "abc" {
 		t.Errorf("expected primaryKey value to be 'abc', but got %q", result.PrimaryKey.Value)
 	}
-	if *result.PrimaryKey.Type != tableSchema.Int64Type {
-		t.Errorf("expected primaryKey type to be EnumTypeString, but got %v", result.PrimaryKey.Type.Type())
+}
+
+func TestCompareBPlusTreeNodesSame(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+
+	node1 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	node2 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err := node1.CompareBPlusTreeNodesSame(&node2)
+	if !isEqual || err != nil {
+		t.Errorf("Expected true and nil error, but got %v and %v", isEqual, err)
+	}
+
+	node3 := BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node3)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node4 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello1")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node4)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node5 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 301},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node5)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node6 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("19")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("John")},
+				"age":  &ValueInfo{Value: []byte("25")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node6)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node7 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           124,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node7)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node8 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 457,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node8)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node9 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  788,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node9)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
+	}
+
+	node10 := BPlusTreeNode{
+		IsLeaf: true,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList: []int64{100, 200, 300},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": &ValueInfo{Value: []byte("Alice")},
+				"age":  &ValueInfo{Value: []byte("18")},
+			},
+			{
+				"name": &ValueInfo{Value: []byte("Bob")},
+				"age":  &ValueInfo{Value: []byte("22")},
+			},
+		},
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  787,
+		ParentOffset:     1,
+	}
+
+	isEqual, err = node1.CompareBPlusTreeNodesSame(&node10)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isEqual {
+		t.Error("Expected false, but got true ")
 	}
 }

@@ -3,10 +3,11 @@ package tableSchema
 import (
 	"fmt"
 	"math"
-	"ne_database/utils"
 	"strconv"
 
 	"ne_database/core/base"
+	"ne_database/utils"
+	"ne_database/utils/list"
 )
 
 type MetaType interface {
@@ -33,6 +34,11 @@ func (t int64Type) GetType() base.DBDataTypeEnumeration {
 
 // IsNull : 0 在数据中是有含义的，这里用最小数来代表Null值
 func (t int64Type) IsNull(data []byte) bool {
+	// 字符串的零值也认为是零
+	nullValue, _ := base.StringToByteList(base.ValueStringNullValue)
+	if len(data) >= len(nullValue) && list.ByteListEqual(data[0:len(nullValue)], nullValue) {
+		return true
+	}
 	i, err := base.ByteListToInt64(data)
 	if err != nil {
 		return true
@@ -64,11 +70,11 @@ func (t int64Type) StringToByte(data string) ([]byte, base.StandardError) {
 	int64Value, err := strconv.ParseInt(data, 10, 64)
 	if err != nil {
 		utils.LogError(fmt.Sprintf("[int64Type.StringToByte.strconv.ParseInt] err: %s", err.Error()))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, err)
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, err)
 	}
 	byteValue, er := base.Int64ToByteList(int64Value)
 	if er != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[int64Type.StringToByte.base.Int64ToByteList] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.StringToByte.base.Int64ToByteList] err: %s", err.Error()))
 		return nil, er
 	}
 	return byteValue, nil
@@ -77,7 +83,7 @@ func (t int64Type) StringToByte(data string) ([]byte, base.StandardError) {
 func (t int64Type) LengthPadding(waitHandleData []byte, length int) ([]byte, base.StandardError) {
 	if len(waitHandleData) != base.DataByteLengthInt64 {
 		utils.LogError(fmt.Sprintf("[int64Type.LengthPadding] err: int64 数据长度不对"))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("int64 数据长度不对"))
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("int64 数据长度不对"))
 	}
 	return waitHandleData, nil
 }
@@ -90,6 +96,11 @@ func (t stringType) GetType() base.DBDataTypeEnumeration {
 }
 
 func (t stringType) IsNull(data []byte) bool {
+	// 字符串的零值也认为是零
+	nullValue, _ := base.StringToByteList(base.ValueStringNullValue)
+	if len(data) >= len(nullValue) && list.ByteListEqual(data[0:len(nullValue)], nullValue) {
+		return true
+	}
 	if data != nil && len(data) > 0 {
 		return data[0] == 0x00
 	}
@@ -113,7 +124,7 @@ func (t stringType) StringToByte(data string) ([]byte, base.StandardError) {
 	}
 	byteValue, er := base.StringToByteList(data)
 	if er != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[stringType.StringToByte.base.StringToByteList] err: %s", er.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[stringType.StringToByte.base.StringToByteList] err: %s", er.Error()))
 		return nil, er
 	}
 	return byteValue, nil
@@ -125,7 +136,7 @@ func (t stringType) LengthPadding(waitHandleData []byte, length int) ([]byte, ba
 	}
 	if len(waitHandleData) > length {
 		utils.LogError(fmt.Sprintf("[stringType.LengthPadding] err: string 数据长度不对"))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("string 数据长度不对"))
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("string 数据长度不对"))
 	}
 	padding := make([]byte, length-len(waitHandleData))
 	return append(waitHandleData, padding...), nil

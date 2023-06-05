@@ -49,7 +49,7 @@ func TestRawToFieldType(t *testing.T) {
 	}
 
 	typeTest, err = RawToFieldType("errorType")
-	expErr := base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
+	expErr := base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
 	if err == nil {
 		t.Error("[RawToFieldType] test fail, expected result was an error, but there was no error received")
 	}
@@ -83,7 +83,7 @@ func TestInitTableMetaInfoByJson(t *testing.T) {
 	if err == nil {
 		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
 	}
-	expErr := base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, nil)
+	expErr := base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, nil)
 	if err.GetErrorCode() != expErr.GetErrorCode() {
 		t.Errorf("InitTableMetaInfoByJson should return error %s, but got %s", expErr.GetErrorCode(), err.GetErrorCode())
 	}
@@ -94,7 +94,7 @@ func TestInitTableMetaInfoByJson(t *testing.T) {
 	if err == nil {
 		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
 	}
-	expErr = base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
+	expErr = base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
 	if err.GetErrorCode() != expErr.GetErrorCode() {
 		t.Errorf("InitTableMetaInfoByJson should return error %s, but got %s", expErr.GetErrorCode(), err.GetErrorCode())
 	}
@@ -105,7 +105,7 @@ func TestInitTableMetaInfoByJson(t *testing.T) {
 	if err == nil {
 		t.Errorf("InitTableMetaInfoByJson should return error, but got nil")
 	}
-	expErr = base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
+	expErr = base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
 	if err.GetErrorCode() != expErr.GetErrorCode() {
 		t.Errorf("InitTableMetaInfoByJson should return error %s, but got %s", expErr.GetErrorCode(), err.GetErrorCode())
 	}

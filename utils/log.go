@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"ne_database/utils/set"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -25,7 +26,7 @@ type logDevConfig struct {
 	IsInit      bool
 	InLogDev    bool
 	LowestLevel int
-	Modules     []string
+	Modules     *set.StringSet
 }
 
 func (l *logDevConfig) Init() {
@@ -37,12 +38,12 @@ func (l *logDevConfig) Init() {
 		l.LowestLevel, _ = strconv.Atoi(levelString)
 	}
 
-	l.Modules = make([]string, 0)
+	m := make([]string, 0)
 	moduleString := os.Getenv("LOG_DEV_MODULES")
 	if moduleString != "" {
-		l.Modules = strings.Split(moduleString, ",")
+		m = strings.Split(moduleString, ",")
 	}
-
+	l.Modules = set.NewStringSet(m...)
 	l.IsInit = true
 }
 
@@ -106,21 +107,12 @@ func LogDev(module string, level int) func(...interface{}) {
 	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {
 		return NilLogFunc
 	}
-	if len(logDevManger.Modules) > 0 {
-		canModulePrint := false
-		for _, m := range logDevManger.Modules {
-			if module == m {
-				canModulePrint = true
-				break
-			}
+	if logDevManger.Modules.Contains(module) || logDevManger.Modules.Contains("All") {
+		return func(value ...interface{}) {
+			log("[Dev Info]", value, fgGreen)
 		}
-		if canModulePrint != true {
-			return NilLogFunc
-		}
-	}
-
-	return func(value ...interface{}) {
-		log("[Dev Info]", value, fgGreen)
+	} else {
+		return NilLogFunc
 	}
 }
 

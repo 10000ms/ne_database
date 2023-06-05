@@ -35,37 +35,61 @@ func (info *TableMetaInfo) ValueFieldInfoMap() (map[string]*FieldInfo, base.Stan
 func (info *TableMetaInfo) Verification() base.StandardError {
 	if info.Name == "" {
 		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 表名为空"))
-		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("表名为空"))
+		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("表名为空"))
 	}
 	if info.PrimaryKeyFieldInfo == nil {
 		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 主键配置为空"))
-		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("主键配置为空"))
+		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("主键配置为空"))
 	}
 	err := info.PrimaryKeyFieldInfo.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 primaryKey info Verification 出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 primaryKey info Verification 出错, %s", err.Error()))
 		return err
 	}
 	if info.ValueFieldInfo == nil || len(info.ValueFieldInfo) == 0 {
 		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
-		return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
+		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
 	}
 	existName := set.NewStringSet()
 	for _, i := range info.ValueFieldInfo {
 		if i == nil {
 			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
-			return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
+			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
 		}
 		err := i.Verification()
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreDTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
 			return err
 		}
 		if existName.Contains(i.Name) {
 			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置名<%s>重复", i.Name))
-			return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置名<%s>重复", i.Name))
+			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置名<%s>重复", i.Name))
 		}
 		existName.Add(i.Name)
+	}
+	return nil
+}
+
+func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
+	var err base.StandardError
+
+	info.PrimaryKeyFieldInfo.RawFieldType, err = FieldTypeToRaw(info.PrimaryKeyFieldInfo.FieldType)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
+		return err
+	}
+
+	if info.ValueFieldInfo == nil {
+		info.ValueFieldInfo = make([]*FieldInfo, 0)
+	}
+	for _, i := range info.ValueFieldInfo {
+		if i != nil {
+			i.RawFieldType, err = FieldTypeToRaw(i.FieldType)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -77,7 +101,7 @@ func (info *FieldInfo) Verification() base.StandardError {
 	case base.DBDataTypeInt64:
 		if info.Length != base.DataByteLengthInt64 {
 			utils.LogError(fmt.Sprintf("[Verification] 类型<%s>校验错误, 类型长度错误: %d", t.GetType(), info.Length))
-			return base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("int64类型长度错误: %d", info.Length))
+			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("int64类型长度错误: %d", info.Length))
 		}
 	}
 	return nil
@@ -99,7 +123,19 @@ func RawToFieldType(raw string) (MetaType, base.StandardError) {
 		return StringType, nil
 	default:
 		utils.LogError(fmt.Sprintf("[RawToFieldType] 错误的RawFieldType: %s", raw))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("错误的RawFieldType: %s", raw))
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("错误的RawFieldType: %s", raw))
+	}
+}
+
+func FieldTypeToRaw(fieldType MetaType) (string, base.StandardError) {
+	switch fieldType {
+	case Int64Type:
+		return string(base.DBDataTypeInt64), nil
+	case StringType:
+		return string(base.DBDataTypeString), nil
+	default:
+		utils.LogError(fmt.Sprintf("[FieldTypeToRaw] 错误的fieldType: %#v", fieldType))
+		return "", base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerTypeError, fmt.Errorf("错误的fieldType: %#v", fieldType))
 	}
 }
 
@@ -109,22 +145,22 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 	er := json.Unmarshal([]byte(metaJson), r)
 	if er != nil {
 		utils.LogError(fmt.Sprintf("[InitTableMetaInfoByJson] json解析错误: %s", er.Error()))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
 	}
 	if r.PrimaryKeyFieldInfo == nil || r.ValueFieldInfo == nil || len(r.ValueFieldInfo) == 0 {
 		utils.LogError(fmt.Sprintf("[InitTableMetaInfoByJson] 表结构内容缺失, 获取json为: %s, 解析后为: %s", metaJson, utils.ToJSON(r)))
-		return nil, base.NewDBError(base.FunctionModelCoreDTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, er)
 	}
 	// 替换主键的 FieldType 为真实
 	pkFieldType, err := RawToFieldType(r.PrimaryKeyFieldInfo.RawFieldType)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] primaryKey RawToFieldType出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] primaryKey RawToFieldType出错, %s", err.Error()))
 		return nil, err
 	}
 	r.PrimaryKeyFieldInfo.FieldType = pkFieldType
 	err = r.PrimaryKeyFieldInfo.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] PrimaryKeyFieldInfo.Verification出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] PrimaryKeyFieldInfo.Verification出错, %s", err.Error()))
 		return nil, err
 	}
 
@@ -132,20 +168,20 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 	for _, v := range r.ValueFieldInfo {
 		valueFieldType, err := RawToFieldType(v.RawFieldType)
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value RawToFieldType出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value RawToFieldType出错, %s", err.Error()))
 			return nil, err
 		}
 		v.FieldType = valueFieldType
 		err = v.Verification()
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value.Verification出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value.Verification出错, %s", err.Error()))
 			return nil, err
 		}
 	}
 
 	err = r.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreDTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] table.Verification出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] table.Verification出错, %s", err.Error()))
 		return nil, err
 	}
 
