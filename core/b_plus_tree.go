@@ -324,6 +324,11 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 		baseErr error
 		err     base.StandardError
 	)
+	if data == nil || len(data) == 0 {
+		errMsg := "输入数据为空"
+		utils.LogError("[BPlusTreeNode LoadByteData] " + errMsg)
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
+	}
 	node.Offset = offset
 	if len(data) != CoreConfig.PageSize {
 		errMsg := "输入数据长度不对"
