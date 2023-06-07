@@ -141,7 +141,7 @@ func LogFatal(value ...interface{}) {
 }
 
 func LogSystem(value ...interface{}) {
-	log("", []interface{}{debug.Stack()}, fgCyan)
+	log("", value, fgCyan)
 }
 
 func ToJSON(data interface{}) string {

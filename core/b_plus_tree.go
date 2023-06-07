@@ -284,25 +284,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	return &r, nil
 }
 
-func (tree *BPlusTree) LoadByteData(data map[int64][]byte) (map[int64]*BPlusTreeNode, base.StandardError) {
-	if data == nil || len(data) == 0 {
-		errMsg := "输入数据内容不对"
-		utils.LogError("[BPlusTree LoadByteData] " + errMsg)
-		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
-	}
-	r := make(map[int64]*BPlusTreeNode, 0)
-	for offset, pageData := range data {
-		n := BPlusTreeNode{}
-		err := n.LoadByteData(offset, tree.TableInfo, pageData)
-		if err != nil {
-			return nil, err
-		}
-		r[offset] = &n
-	}
-	return r, nil
-}
-
-func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.StandardError) {
+func (tree *BPlusTree) OffsetLoadNode(offset int64, parentOffset int64) (*BPlusTreeNode, base.StandardError) {
 	rm := tree.ResourceManager
 	nodeData, er := rm.Reader(offset)
 	if er != nil {
@@ -310,7 +292,7 @@ func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.Standa
 		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
 	}
 	node := &BPlusTreeNode{}
-	err := node.LoadByteData(offset, tree.TableInfo, nodeData)
+	err := node.LoadByteData(offset, parentOffset, tree.TableInfo, nodeData)
 	if err != nil {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[OffsetToNode] Node LoadByteData 出错: %s", err.Error()))
 		return nil, err
@@ -319,11 +301,12 @@ func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.Standa
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
-func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) base.StandardError {
+func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) base.StandardError {
 	var (
 		baseErr error
 		err     base.StandardError
 	)
+	node.ParentOffset = parentOffset
 	if data == nil || len(data) == 0 {
 		errMsg := "输入数据为空"
 		utils.LogError("[BPlusTreeNode LoadByteData] " + errMsg)
@@ -427,7 +410,7 @@ func (node *BPlusTreeNode) NodeByteDataLength(tree *BPlusTree) int {
 	return baseLength
 }
 
-func (node *BPlusTreeNode) NodeToByteData() ([]byte, base.StandardError) {
+func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) ([]byte, base.StandardError) {
 	var (
 		d   = make([]byte, 0)
 		err base.StandardError
@@ -454,6 +437,8 @@ func (node *BPlusTreeNode) NodeToByteData() ([]byte, base.StandardError) {
 			utils.LogError("[NodeToByteData] " + errMsg)
 			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 		}
+		lengthPaddingFunc := tableInfo.PrimaryKeyFieldInfo.FieldType.LengthPadding
+		keyValueLength := tableInfo.PrimaryKeyFieldInfo.Length
 		for i := 0; i < len(node.KeysValueList); i++ {
 			offsetByte, err := base.Int64ToByteList(node.KeysOffsetList[i])
 			if err != nil {
@@ -461,7 +446,12 @@ func (node *BPlusTreeNode) NodeToByteData() ([]byte, base.StandardError) {
 				return nil, err
 			}
 			d = append(d, offsetByte...)
-			d = append(d, node.KeysValueList[i].Value...)
+			keyValueByte, err := lengthPaddingFunc(node.KeysValueList[i].Value, keyValueLength)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] keyValueByte.lengthPaddingFunc 出错, %s", err.Error()))
+				return nil, err
+			}
+			d = append(d, keyValueByte...)
 		}
 		lastOffsetByte, err := base.Int64ToByteList(node.KeysOffsetList[len(node.KeysOffsetList)-1])
 		if err != nil {
@@ -475,10 +465,40 @@ func (node *BPlusTreeNode) NodeToByteData() ([]byte, base.StandardError) {
 			utils.LogError("[NodeToByteData] " + errMsg)
 			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 		}
+		lengthPaddingFunc := tableInfo.PrimaryKeyFieldInfo.FieldType.LengthPadding
+		keyValueLength := tableInfo.PrimaryKeyFieldInfo.Length
+		valueFieldInfoMap, err := tableInfo.ValueFieldInfoMap()
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] tableInfo.ValueFieldInfoMap 出错, %s", err.Error()))
+			return nil, err
+		}
 		for i := 0; i < len(node.KeysValueList); i++ {
-			d = append(d, node.KeysValueList[i].Value...)
-			for _, v := range node.DataValues[i] {
-				d = append(d, v.Value...)
+			if node.DataValues[i] != nil && len(node.DataValues[i]) != len(tableInfo.ValueFieldInfo) {
+				errMsg := "非法叶子结点，值为空或值内容不足"
+				utils.LogError("[NodeToByteData] " + errMsg)
+				return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
+			}
+			keyValueByte, err := lengthPaddingFunc(node.KeysValueList[i].Value, keyValueLength)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] keyValueByte.lengthPaddingFunc 出错, %s", err.Error()))
+				return nil, err
+			}
+			d = append(d, keyValueByte...)
+			for _, valueFieldInfo := range tableInfo.ValueFieldInfo {
+				nodeValue, ok := node.DataValues[i][valueFieldInfo.Name]
+				if !ok {
+					errMsg := fmt.Sprintf("非法叶子结点，<%s>值不存在", valueFieldInfo.Name)
+					utils.LogError("[NodeToByteData] " + errMsg)
+					return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
+				}
+				valueLengthPaddingFunc := valueFieldInfoMap[valueFieldInfo.Name].FieldType.LengthPadding
+				valueLength := valueFieldInfoMap[valueFieldInfo.Name].Length
+				valueByte, err := valueLengthPaddingFunc(nodeValue.Value, valueLength)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] keyValueByte.lengthPaddingFunc 出错, %s", err.Error()))
+					return nil, err
+				}
+				d = append(d, valueByte...)
 			}
 		}
 	}
@@ -507,31 +527,44 @@ func (tree *BPlusTree) LoadAllNode() (map[int64]*BPlusTreeNode, base.StandardErr
 	// 先加入根节点
 	allNode[0] = tree.Root
 
-	// 遍历获取其他节点并加入
-	waitHandleList := make([]int64, 0)
-	waitHandleList = append(waitHandleList, tree.Root.KeysOffsetList...)
+	// 遍历获取其他节点并加入 [child offset, offset]
+	waitHandleList := make([][]int64, 0)
+	for _, childOffset := range tree.Root.KeysOffsetList {
+		waitHandleList = append(waitHandleList, []int64{childOffset, 0})
+	}
 	for len(waitHandleList) > 0 {
-		offset := waitHandleList[0]
+		offsets := waitHandleList[0]
 		waitHandleList = waitHandleList[1:]
+		// 错误的 offsets
+		if offsets == nil || len(offsets) != 2 {
+			errMsg := fmt.Sprintf("错误的offset <%s>", utils.ToJSON(offsets))
+			utils.LogError(fmt.Sprintf("[LoadAllNode] %s", errMsg))
+			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
+		}
+		childOffset := offsets[0]
+		parentOffset := offsets[1]
 		// 空 offset 跳过
-		if offset == base.NodeTypeIsLeaf {
+		if childOffset == base.NodeTypeIsLeaf {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("空的 offsets, 跳过"))
 			continue
 		}
-		nodeByte, err := tree.ResourceManager.Reader(offset)
+		nodeByte, err := tree.ResourceManager.Reader(childOffset)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadAllNode.ResourceManager.Reader]错误: %s", err.Error()))
 			return nil, err
 		}
 		node := BPlusTreeNode{}
-		err = node.LoadByteData(offset, tree.TableInfo, nodeByte)
+		err = node.LoadByteData(childOffset, parentOffset, tree.TableInfo, nodeByte)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadAllNode.node.LoadByteData]错误: %s", err.Error()))
 			return nil, err
 		}
-		allNode[offset] = &node
+		allNode[childOffset] = &node
 		// 如果不是叶子节点，需要加入它的KeysOffsetList
 		if !node.IsLeaf {
-			waitHandleList = append(waitHandleList, node.KeysOffsetList...)
+			for _, cOffset := range node.KeysOffsetList {
+				waitHandleList = append(waitHandleList, []int64{cOffset, childOffset})
+			}
 		}
 	}
 	return allNode, nil
@@ -839,7 +872,7 @@ func (tree *BPlusTree) PrintBPlusTree() base.StandardError {
 				for _, offset := range node.KeysOffsetList {
 					if offset != base.OffsetNull {
 						nextLevelCount += 1
-						childNode, err := tree.OffsetLoadNode(offset)
+						childNode, err := tree.OffsetLoadNode(offset, node.Offset)
 						if err != nil {
 							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[PrintBPlusTree.OffsetLoadNode]错误: %s", err.Error()))
 							return err
@@ -914,7 +947,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 			return nil, err
 		}
 		originalNode := node.JSONTypeToOriginalType()
-		byteData, err := originalNode.NodeToByteData()
+		byteData, err := originalNode.NodeToByteData(tree.TableInfo)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
 			return nil, err

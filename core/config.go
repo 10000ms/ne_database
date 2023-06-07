@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"ne_database/utils"
 	"os"
 )
@@ -22,23 +23,30 @@ func (c *config) Init() error {
 		var ConfigFilePath string
 		ConfigFilePath = os.Getenv("CONFIG_PATH")
 		if ConfigFilePath != "" {
-			utils.LogSystem("获取到配置文件地址: %s")
+			utils.LogSystem(fmt.Sprintf("获取到配置文件地址: %s", ConfigFilePath))
 			utils.LogSystem("开始从配置文件加载配置信息...")
 
 			rawConfig, err := os.ReadFile(ConfigFilePath)
 			if err != nil {
-				utils.LogFatal("获取不到配置文件！")
+				utils.LogError("获取不到配置文件", err)
 				return err
 			}
-			err = json.Unmarshal(rawConfig, c)
-			if err != nil {
-				utils.LogFatal("获取不到配置文件！")
-				return err
-			}
+			err = c.InitByJSON(string(rawConfig))
+			return err
 		}
-		utils.LogSystem("初始化配置完成，目前的配置是：%s", utils.ToJSON(c))
+		utils.LogSystem(fmt.Sprintf("初始化配置完成，目前的配置是：%s", utils.ToJSON(c)))
 		c.init = true
 	}
+	return nil
+}
+
+func (c *config) InitByJSON(jsonConfig string) error {
+	err := json.Unmarshal([]byte(jsonConfig), c)
+	if err != nil {
+		utils.LogError("读取JSON配置错误", err)
+		return err
+	}
+	utils.LogSystem("读取JSON配置完成")
 	return nil
 }
 
