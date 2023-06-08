@@ -271,7 +271,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 		Value: pkType.TrimRaw(pkValue),
 	}
 	// 3. 获取各个值的信息
-	valueIndex += startIndex + primaryKeyInfo.Length
+	valueIndex += primaryKeyInfo.Length
 	r.Value = make(map[string]*ValueInfo, 0)
 	for _, v := range valueInfo {
 		r.Value[v.Name] = &ValueInfo{
@@ -344,6 +344,7 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableI
 			return err
 		}
 		for true {
+			loopTime += 1
 			if node.KeysOffsetList == nil {
 				node.KeysOffsetList = make([]int64, 0)
 			}
@@ -373,6 +374,7 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableI
 			return err
 		}
 		for true {
+			loopTime += 1
 			if node.KeysValueList == nil {
 				node.KeysValueList = make([]*ValueInfo, 0)
 			}
@@ -962,6 +964,24 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	tree.ResourceManager = manager
 
 	return &tree, nil
+}
+
+func (node *BPlusTreeNode) BPlusTreeNodeToJson(tableInfo *tableSchema.TableMetaInfo) (string, base.StandardError) {
+	b := BPlusTreeNodeJSON{
+		BPlusTreeNode: *node,
+	}
+	err := b.GetValueAndKeyStringValue(tableInfo)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNodeToJson] GetValueAndKeyStringValue 错误: %s", err.Error()))
+		return "", err
+	}
+	// 转化 json
+	jsonByte, er := json.Marshal(b)
+	if er != nil {
+		utils.LogError(fmt.Sprintf("[BPlusTreeNodeToJson] json.Marshal 错误, %s", er.Error()))
+		return "", base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
+	}
+	return string(jsonByte), nil
 }
 
 func (tree *BPlusTree) BPlusTreeToJson() (string, base.StandardError) {

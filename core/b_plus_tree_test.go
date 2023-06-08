@@ -92,6 +92,21 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 		t.Errorf("expected primaryKeySuccess to be true, but got false")
 	}
 
+	// 测试第3次解析
+	loopTime = 3
+	// 调用被测试函数
+	result, err = getNoLeafNodeByteDataReadLoopData(data, loopTime, primaryKeyInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if result.OffsetSuccess {
+		t.Errorf("expected offsetSuccess to be true, but got false")
+	}
+	if result.PrimaryKeySuccess {
+		t.Errorf("expected primaryKeySuccess to be true, but got false")
+	}
+
 }
 
 func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
@@ -215,6 +230,21 @@ func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
 		return
 	}
 
+	// 测试第2次解析
+	loopTime = 2
+	result, err = getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if result.PrimaryKeySuccess {
+		t.Errorf("expected PrimaryKeySuccess to be true, but got false")
+		return
+	}
+	if result.ValueSuccess {
+		t.Errorf("expected ValueSuccess to be true, but got false")
+		return
+	}
 }
 
 func TestBPlusTreeNode_LoadByteData(t *testing.T) {
@@ -286,7 +316,11 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 
 	targetNode := &BPlusTreeNode{}
 	err = targetNode.LoadByteData(offset, parentOffset, tableInfo2, data)
-	utils.LogDebug(fmt.Sprintf("targetNode: %s", utils.ToJSON(targetNode)))
+	jsonNode, err := targetNode.BPlusTreeNodeToJson(tableInfo2)
+	if err != nil {
+		t.Errorf("BPlusTreeNodeToJson Error: %v", err)
+	}
+	utils.LogDebug(fmt.Sprintf("targetNode: %s", jsonNode))
 	if err != nil {
 		t.Errorf("LoadByteData Error: %v", err)
 	}
