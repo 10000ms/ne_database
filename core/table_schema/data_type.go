@@ -10,6 +10,10 @@ import (
 	"ne_database/utils/list"
 )
 
+const (
+	NullStringByte = 0x00
+)
+
 type MetaType interface {
 	// GetType 获取值类型
 	GetType() base.DBDataTypeEnumeration
@@ -23,6 +27,8 @@ type MetaType interface {
 	StringToByte(string) ([]byte, base.StandardError)
 	// LengthPadding 长度填充
 	LengthPadding([]byte, int) ([]byte, base.StandardError)
+	// TrimRaw 可变长度数据类型进行修整
+	TrimRaw([]byte) []byte
 }
 
 type int64Type struct {
@@ -88,6 +94,14 @@ func (t int64Type) LengthPadding(waitHandleData []byte, length int) ([]byte, bas
 	return waitHandleData, nil
 }
 
+func (t int64Type) TrimRaw(data []byte) []byte {
+	if data == nil {
+		return make([]byte, 0)
+	} else {
+		return data
+	}
+}
+
 type stringType struct {
 }
 
@@ -102,13 +116,13 @@ func (t stringType) IsNull(data []byte) bool {
 		return true
 	}
 	if data != nil && len(data) > 0 {
-		return data[0] == 0x00
+		return data[0] == NullStringByte
 	}
 	return true
 }
 
 func (t stringType) GetNull() []byte {
-	return []byte{0x00}
+	return []byte{NullStringByte}
 }
 
 func (t stringType) LogString(data []byte) string {
@@ -140,6 +154,26 @@ func (t stringType) LengthPadding(waitHandleData []byte, length int) ([]byte, ba
 	}
 	padding := make([]byte, length-len(waitHandleData))
 	return append(waitHandleData, padding...), nil
+}
+
+func (t stringType) TrimRaw(data []byte) []byte {
+	if data == nil {
+		return make([]byte, 0)
+	}
+	endOffset := -1
+	for i, v := range data {
+		if v == NullStringByte {
+			endOffset = i
+			break
+		}
+	}
+	if endOffset == -1 {
+		return data
+	} else if endOffset == 0 {
+		return make([]byte, 0)
+	} else {
+		return data[:endOffset]
+	}
 }
 
 var (

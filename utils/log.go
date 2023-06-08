@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"ne_database/utils/set"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -49,10 +50,32 @@ func (l *logDevConfig) Init() {
 
 var logDevManger = logDevConfig{}
 
-func log(level string, value []interface{}, color int) {
+func getFuncName(p string) string {
+	index := strings.LastIndexByte(p, '/')
+	if index != -1 {
+		p = p[index:]
+		index = strings.IndexByte(p, '.')
+		if index != -1 {
+			p = strings.TrimPrefix(p[index:], ".")
+		}
+	}
+	return p
+}
+
+func log(level string, value []interface{}, color int, depth int) {
 	now := time.Now()
+	pc, f, l, ok := runtime.Caller(depth)
+	if !ok {
+		f = "UNkOWN"
+		l = 1
+	} else {
+		s := strings.LastIndex(f, "/")
+		if s >= 0 {
+			f = f[s+1:]
+		}
+	}
 	dateString := fmt.Sprintf(
-		"%d-%d-%d %d:%d:%d.%d",
+		"%d-%d-%d %d:%d:%d.%d [%s:%d:%s]",
 		now.Year(),
 		now.Month(),
 		now.Day(),
@@ -60,6 +83,9 @@ func log(level string, value []interface{}, color int) {
 		now.Minute(),
 		now.Second(),
 		now.Nanosecond()/100000,
+		f,
+		l,
+		getFuncName(runtime.FuncForPC(pc).Name()),
 	)
 	var (
 		info    string
@@ -109,7 +135,7 @@ func LogDev(module string, level int) func(...interface{}) {
 	}
 	if logDevManger.Modules.Contains(module) || logDevManger.Modules.Contains("All") {
 		return func(value ...interface{}) {
-			log("[Dev Info]", value, fgGreen)
+			log("[Dev Info]", value, fgGreen, 2)
 		}
 	} else {
 		return NilLogFunc
@@ -117,31 +143,31 @@ func LogDev(module string, level int) func(...interface{}) {
 }
 
 func LogDebug(value ...interface{}) {
-	log("[DEBUG]", value, fgMagenta)
+	log("[DEBUG]", value, fgMagenta, 2)
 }
 
 func LogInfo(value ...interface{}) {
-	log("[INFO]", value, 0)
+	log("[INFO]", value, 0, 2)
 }
 
 func LogWarning(value ...interface{}) {
-	log("[WARNING]", value, fgYellow)
+	log("[WARNING]", value, fgYellow, 2)
 }
 
 func LogError(value ...interface{}) {
 	color := fgRed
-	log("[ERROR]", value, color)
-	log("", []interface{}{debug.Stack()}, color)
+	log("[ERROR]", value, color, 2)
+	log("", []interface{}{debug.Stack()}, color, 2)
 }
 
 func LogFatal(value ...interface{}) {
 	color := fgRed
-	log("[FATAL]", value, color)
-	log("", []interface{}{debug.Stack()}, color)
+	log("[FATAL]", value, color, 2)
+	log("", []interface{}{debug.Stack()}, color, 2)
 }
 
 func LogSystem(value ...interface{}) {
-	log("", value, fgCyan)
+	log("", value, fgCyan, 2)
 }
 
 func ToJSON(data interface{}) string {

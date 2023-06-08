@@ -219,7 +219,7 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 		} else {
 			r.PrimaryKeySuccess = true
 			r.PrimaryKey = &ValueInfo{
-				Value: fieldValue,
+				Value: fieldType.TrimRaw(fieldValue),
 			}
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
 			return &r, nil
@@ -261,21 +261,21 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	// 2. 先获取主键信息
 	pkValue := data[startIndex : startIndex+primaryKeyInfo.Length]
 	pkType := primaryKeyInfo.FieldType
-	if !pkType.IsNull(pkValue) {
+	if pkType.IsNull(pkValue) {
 		errMsg := "主键数据为空"
 		utils.LogError("[getLeafNodeByteDataReadLoopData] " + errMsg)
 		return &r, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
 	}
 	r.PrimaryKeySuccess = true
 	r.PrimaryKey = &ValueInfo{
-		Value: pkValue,
+		Value: pkType.TrimRaw(pkValue),
 	}
 	// 3. 获取各个值的信息
 	valueIndex += startIndex + primaryKeyInfo.Length
 	r.Value = make(map[string]*ValueInfo, 0)
 	for _, v := range valueInfo {
 		r.Value[v.Name] = &ValueInfo{
-			Value: data[startIndex+valueIndex : startIndex+valueIndex+v.Length],
+			Value: v.FieldType.TrimRaw(data[startIndex+valueIndex : startIndex+valueIndex+v.Length]),
 		}
 		valueIndex += v.Length
 	}
@@ -325,13 +325,15 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableI
 		node.IsLeaf = false
 	}
 	// 2. 加载这个节点的相邻两个节点的偏移量(offset)
-	node.BeforeNodeOffset, baseErr = base.ByteListToInt64(data[1:5])
+	startOffset := 1 + base.DataByteLengthOffset
+	endOffset := len(data) - base.DataByteLengthOffset
+	node.BeforeNodeOffset, baseErr = base.ByteListToInt64(data[1:startOffset])
 	if baseErr != nil {
 		return err
 	}
-	node.AfterNodeOffset, baseErr = base.ByteListToInt64(data[len(data)-4:])
+	node.AfterNodeOffset, baseErr = base.ByteListToInt64(data[endOffset:])
 	// 3. 加载这个节点的实际数据
-	data = data[5 : len(data)-4]
+	data = data[startOffset:endOffset]
 	// 循环次数
 	loopTime := 0
 	if !node.IsLeaf {

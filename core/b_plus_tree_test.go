@@ -3,34 +3,44 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"ne_database/utils"
 	"os"
 	"testing"
 
 	"ne_database/core/base"
 	"ne_database/core/resource"
 	tableSchema "ne_database/core/table_schema"
+	"ne_database/utils"
 )
 
 func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
+	// 初始化一下
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+
 	// 构造测试数据
-	data := []byte{0, 0, 0, 1, 'a', 'b', 'c'}
-	loopTime := 0 // 测试第一轮解析
+	data := []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: null
+	}
+	loopTime := 0 // 测试第0次解析
 	primaryKeyInfo := &tableSchema.FieldInfo{
 		Name:      "id",
-		Length:    3,
-		FieldType: tableSchema.Int64Type,
+		Length:    4 * 2, // 假设最长2字
+		FieldType: tableSchema.StringType,
 	}
 
 	// 调用被测试函数
 	result, err := getNoLeafNodeByteDataReadLoopData(data, loopTime, primaryKeyInfo)
-
-	// 断言结果
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 		return
 	}
-	if result.Offset != 1 {
+	if result.Offset != 50 {
 		t.Errorf("expected offset to be 1, but got %d", result.Offset)
 	}
 	if !result.OffsetSuccess {
@@ -39,9 +49,255 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	if !result.PrimaryKeySuccess {
 		t.Errorf("expected primaryKeySuccess to be true, but got false")
 	}
-	if string(result.PrimaryKey.Value) != "abc" {
-		t.Errorf("expected primaryKey value to be 'abc', but got %q", result.PrimaryKey.Value)
+	if string(result.PrimaryKey.Value) != "a" {
+		t.Errorf("expected primaryKey value to be 'a', but got %q", result.PrimaryKey.Value)
 	}
+
+	// 测试第1次解析
+	loopTime = 1
+	// 调用被测试函数
+	result, err = getNoLeafNodeByteDataReadLoopData(data, loopTime, primaryKeyInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if result.Offset != 100 {
+		t.Errorf("expected offset to be 1, but got %d", result.Offset)
+	}
+	if !result.OffsetSuccess {
+		t.Errorf("expected offsetSuccess to be true, but got false")
+	}
+	if !result.PrimaryKeySuccess {
+		t.Errorf("expected primaryKeySuccess to be true, but got false")
+	}
+	if string(result.PrimaryKey.Value) != "b" {
+		t.Errorf("expected primaryKey value to be 'b', but got %q", result.PrimaryKey.Value)
+	}
+
+	// 测试第2次解析
+	loopTime = 2
+	// 调用被测试函数
+	result, err = getNoLeafNodeByteDataReadLoopData(data, loopTime, primaryKeyInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if result.Offset != 200 {
+		t.Errorf("expected offset to be 1, but got %d", result.Offset)
+	}
+	if !result.OffsetSuccess {
+		t.Errorf("expected offsetSuccess to be true, but got false")
+	}
+	if result.PrimaryKeySuccess {
+		t.Errorf("expected primaryKeySuccess to be true, but got false")
+	}
+
+}
+
+func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
+	// 初始化一下
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+
+	// 构造测试数据
+	data := []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // id: 1
+		0x41, 0x6c, 0x69, 0x63, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //  name: "Alice"
+		0x32, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // age: "20"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // id: 2
+		0x42, 0x6f, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // name: "Bob"
+		0x32, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // age: "22"
+	}
+	loopTime := 0 // 测试第0次解析
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+
+	result, err := getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if !result.PrimaryKeySuccess {
+		t.Errorf("expected PrimaryKeySuccess to be true, but got false")
+		return
+	}
+	if !result.ValueSuccess {
+		t.Errorf("expected ValueSuccess to be true, but got false")
+		return
+	}
+	pk, err := base.ByteListToInt64(result.PrimaryKey.Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if pk != 1 {
+		t.Errorf("expected PrimaryKey is 1")
+		return
+	}
+	age, err := base.ByteListToString(result.Value["age"].Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if age != "20" {
+		t.Errorf("expected age is '20'")
+		return
+	}
+	name, err := base.ByteListToString(result.Value["name"].Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if name != "Alice" {
+		t.Errorf("expected name is 'Alice'")
+		return
+	}
+
+	// 测试第1次解析
+	loopTime = 1
+	result, err = getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if !result.PrimaryKeySuccess {
+		t.Errorf("expected PrimaryKeySuccess to be true, but got false")
+		return
+	}
+	if !result.ValueSuccess {
+		t.Errorf("expected ValueSuccess to be true, but got false")
+		return
+	}
+	pk, err = base.ByteListToInt64(result.PrimaryKey.Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if pk != 2 {
+		t.Errorf("expected PrimaryKey is 2")
+		return
+	}
+	age, err = base.ByteListToString(result.Value["age"].Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if age != "22" {
+		t.Errorf("expected age is '22'")
+		return
+	}
+	name, err = base.ByteListToString(result.Value["name"].Value)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if name != "Bob" {
+		t.Errorf("expected name is 'Bob'")
+		return
+	}
+
+}
+
+func TestBPlusTreeNode_LoadByteData(t *testing.T) {
+	// 初始化一下
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	// 构造测试数据
+	data := []byte{
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+	}
+	data = append(data, make([]uint8, pageSize-len(data)-base.DataByteLengthOffset)...)
+	data = append(data, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, // AfterNodeOffset: 1500
+	}...)
+
+	tableInfo2 := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    4 * 2, // 假设最长2字
+			FieldType: tableSchema.StringType,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+
+	keyA, err := base.StringToByteList("a")
+	if err != nil {
+		t.Errorf("StringToByteList Error: %v", err)
+	}
+
+	keyB, err := base.StringToByteList("b")
+	if err != nil {
+		t.Errorf("StringToByteList Error: %v", err)
+	}
+
+	offset := int64(1000)
+	parentOffset := int64(2000)
+	node := &BPlusTreeNode{
+		IsLeaf:           false,
+		KeysValueList:    []*ValueInfo{{Value: keyA}, {Value: keyB}},
+		KeysOffsetList:   []int64{50, 100, 200},
+		DataValues:       nil,
+		Offset:           offset,
+		BeforeNodeOffset: 500,
+		AfterNodeOffset:  1500,
+		ParentOffset:     parentOffset,
+	}
+
+	targetNode := &BPlusTreeNode{}
+	err = targetNode.LoadByteData(offset, parentOffset, tableInfo2, data)
+	utils.LogDebug(fmt.Sprintf("targetNode: %s", utils.ToJSON(targetNode)))
+	if err != nil {
+		t.Errorf("LoadByteData Error: %v", err)
+	}
+	isEqual, err := node.CompareBPlusTreeNodesSame(targetNode)
+	if err != nil {
+		t.Error("CompareBPlusTreeNodesSame Expected nil error, but got error")
+	}
+	if !isEqual {
+		t.Error("CompareBPlusTreeNodesSame Expected true, but got false ")
+	}
+
 }
 
 func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
@@ -52,7 +308,7 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	pageSize := 1000
 	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	tableInfo := &tableSchema.TableMetaInfo{
+	tableInfo1 := &tableSchema.TableMetaInfo{
 		Name: "users",
 		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
 			Name:      "id",
@@ -60,14 +316,14 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 			FieldType: tableSchema.Int64Type,
 		},
 		ValueFieldInfo: []*tableSchema.FieldInfo{
-			&tableSchema.FieldInfo{
+			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
 				FieldType: tableSchema.StringType,
 			},
-			&tableSchema.FieldInfo{
+			{
 				Name:      "age",
-				Length:    4 * 2, // 假设最长4字
+				Length:    4 * 2, // 假设最长2字
 				FieldType: tableSchema.StringType,
 			},
 		},
@@ -103,7 +359,7 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 		ParentOffset:     200,
 	}
 
-	data, err := node.NodeToByteData(tableInfo)
+	data, err := node.NodeToByteData(tableInfo1)
 	if err != nil {
 		t.Errorf("Error: %v", err)
 	}
@@ -127,35 +383,68 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 		t.Errorf("Expected: %v \n\t\t\t\t\t  but got: %v", expected, data)
 	}
 
-	// TODO 完成更多场景的单元测试
-	//node = &BPlusTreeNode{
-	//	IsLeaf:           false,
-	//	KeysValueList:    []*ValueInfo{{Value: []byte("a")}, {Value: []byte("b")}},
-	//	KeysOffsetList:   []int64{50, 100, 200},
-	//	DataValues:       nil,
-	//	Offset:           1000,
-	//	BeforeNodeOffset: 500,
-	//	AfterNodeOffset:  1500,
-	//	ParentOffset:     2000,
-	//}
-	//data, err = node.NodeToByteData(tableInfo)
-	//if err != nil {
-	//	t.Errorf("Error: %v", err)
-	//}
-	//expected = []byte{
-	//	0x00,                                           // IsLeaf: false
-	//	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x64, // BeforeNodeOffset: 500
-	//	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // Offset of 'a'
-	//	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // Offset of 'b'
-	//	0x61,                                           // 'a'
-	//	0x62,                                           // 'b'
-	//	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // Offset of a child node
-	//	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Padding
-	//}
-	//
-	//if !bytes.Equal(data, expected) {
-	//	t.Errorf("Expected: %v, but got: %v", expected, data)
-	//}
+	tableInfo2 := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    4 * 2, // 假设最长2字
+			FieldType: tableSchema.StringType,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+
+	keyA, err := base.StringToByteList("a")
+	if err != nil {
+		t.Errorf("StringToByteList Error: %v", err)
+	}
+
+	keyB, err := base.StringToByteList("b")
+	if err != nil {
+		t.Errorf("StringToByteList Error: %v", err)
+	}
+
+	node = &BPlusTreeNode{
+		IsLeaf:           false,
+		KeysValueList:    []*ValueInfo{{Value: keyA}, {Value: keyB}},
+		KeysOffsetList:   []int64{50, 100, 200},
+		DataValues:       nil,
+		Offset:           1000,
+		BeforeNodeOffset: 500,
+		AfterNodeOffset:  1500,
+		ParentOffset:     2000,
+	}
+	data, err = node.NodeToByteData(tableInfo2)
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+	expected = []byte{
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+	}
+	expected = append(expected, make([]uint8, pageSize-len(expected)-base.DataByteLengthOffset)...)
+	expected = append(expected, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, // AfterNodeOffset: 1500
+	}...)
+	utils.LogDebug(fmt.Sprintf("expected []byte  %v", expected))
+	if !bytes.Equal(data, expected) {
+		t.Errorf("Expected: %v \n\t\t\t\t\t  but got: %v", expected, data)
+	}
 }
 
 func TestCompareBPlusTreesSame(t *testing.T) {
@@ -197,12 +486,12 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				FieldType: tableSchema.Int64Type,
 			},
 			ValueFieldInfo: []*tableSchema.FieldInfo{
-				&tableSchema.FieldInfo{
+				{
 					Name:      "name",
 					Length:    4 * 20, // 假设最长20字节
 					FieldType: tableSchema.StringType,
 				},
-				&tableSchema.FieldInfo{
+				{
 					Name:      "age",
 					Length:    4 * 5, // 假设最长20字节
 					FieldType: tableSchema.StringType,
@@ -244,12 +533,12 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				FieldType: tableSchema.Int64Type,
 			},
 			ValueFieldInfo: []*tableSchema.FieldInfo{
-				&tableSchema.FieldInfo{
+				{
 					Name:      "name",
 					Length:    4 * 20, // 假设最长20字节
 					FieldType: tableSchema.StringType,
 				},
-				&tableSchema.FieldInfo{
+				{
 					Name:      "age",
 					Length:    4 * 5, // 假设最长20字节
 					FieldType: tableSchema.StringType,
