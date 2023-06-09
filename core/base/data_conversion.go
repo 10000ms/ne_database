@@ -48,6 +48,25 @@ func Int64ToByteList(data int64) ([]byte, StandardError) {
 	return b, nil
 }
 
+func ByteListToUint64(data []byte) (uint64, StandardError) {
+	if len(data) != DataByteLengthUint64 {
+		return 0, NewDBError(FunctionModelCoreDataConversion, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, fmt.Errorf("[ByteListToUint64], len(data) != %d, %#v", DataByteLengthUint64, data))
+	}
+	var val uint64
+	err := binary.Read(bytes.NewBuffer(data), binary.BigEndian, &val)
+	if err != nil {
+		return 0, NewDBError(FunctionModelCoreDataConversion, ErrorTypeSystem, ErrorBaseCodeInnerParameterError, err)
+	}
+	return val, nil
+}
+
+// Uint64ToByteList 大端字节序，将uint64的数据转为[]byte的数据
+func Uint64ToByteList(data uint64) ([]byte, StandardError) {
+	b := make([]byte, DataByteLengthUint64)
+	binary.BigEndian.PutUint64(b, data)
+	return b, nil
+}
+
 func ByteListToString(data []byte) (string, StandardError) {
 	str := string(data)
 	return str, nil

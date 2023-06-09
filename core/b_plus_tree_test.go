@@ -255,10 +255,105 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 	pageSize := 1000
 	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	// 构造测试数据
+	// 构造测试数据1
 	data := []byte{
-		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // BeforeNodeOffset: 50
+		0x01,                                           // IsLeaf: true
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // node value length: 2
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // id: 1
+		0x41, 0x6c, 0x69, 0x63, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //  name: "Alice"
+		0x32, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // age: "20"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // id: 2
+		0x42, 0x6f, 0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // name: "Bob"
+		0x32, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // age: "22"
+	}
+	data = append(data, make([]uint8, pageSize-len(data)-base.DataByteLengthOffset)...)
+	data = append(data, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x96, // AfterNodeOffset: 150
+	}...)
+
+	tableInfo1 := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+
+	key1, err := base.Int64ToByteList(int64(1))
+	if err != nil {
+		t.Errorf("Int64ToByteList Error: %v", err)
+		return
+	}
+
+	key2, err := base.Int64ToByteList(int64(2))
+	if err != nil {
+		t.Errorf("Int64ToByteList Error: %v", err)
+		return
+	}
+
+	offset := int64(100)
+	parentOffset := int64(200)
+	node := &BPlusTreeNode{
+		IsLeaf:         true,
+		KeysValueList:  []*ValueInfo{{Value: key1}, {Value: key2}},
+		KeysOffsetList: nil,
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": {Value: []byte("Alice")},
+				"age":  {Value: []byte("20")},
+			},
+			{
+				"name": {Value: []byte("Bob")},
+				"age":  {Value: []byte("22")},
+			},
+		},
+		Offset:           offset,
+		BeforeNodeOffset: 50,
+		AfterNodeOffset:  150,
+		ParentOffset:     parentOffset,
+	}
+
+	targetNode := &BPlusTreeNode{}
+	err = targetNode.LoadByteData(offset, parentOffset, tableInfo1, data)
+	jsonNode, err := targetNode.BPlusTreeNodeToJson(tableInfo1)
+	if err != nil {
+		t.Errorf("BPlusTreeNodeToJson Error: %v", err)
+		return
+	}
+	utils.LogDebug(fmt.Sprintf("targetNode: %s", jsonNode))
+	if err != nil {
+		t.Errorf("LoadByteData Error: %v", err)
+		return
+	}
+	isEqual, err := node.CompareBPlusTreeNodesSame(targetNode)
+	if err != nil {
+		t.Error("CompareBPlusTreeNodesSame Expected nil error, but got error")
+		return
+	}
+	if !isEqual {
+		t.Error("CompareBPlusTreeNodesSame Expected true, but got false ")
+		return
+	}
+
+	// 构造测试数据2
+	data = []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // node value length: 3
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
 		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
@@ -294,16 +389,18 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 	keyA, err := base.StringToByteList("a")
 	if err != nil {
 		t.Errorf("StringToByteList Error: %v", err)
+		return
 	}
 
 	keyB, err := base.StringToByteList("b")
 	if err != nil {
 		t.Errorf("StringToByteList Error: %v", err)
+		return
 	}
 
-	offset := int64(1000)
-	parentOffset := int64(2000)
-	node := &BPlusTreeNode{
+	offset = int64(1000)
+	parentOffset = int64(2000)
+	node = &BPlusTreeNode{
 		IsLeaf:           false,
 		KeysValueList:    []*ValueInfo{{Value: keyA}, {Value: keyB}},
 		KeysOffsetList:   []int64{50, 100, 200},
@@ -314,22 +411,26 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 		ParentOffset:     parentOffset,
 	}
 
-	targetNode := &BPlusTreeNode{}
+	targetNode = &BPlusTreeNode{}
 	err = targetNode.LoadByteData(offset, parentOffset, tableInfo2, data)
-	jsonNode, err := targetNode.BPlusTreeNodeToJson(tableInfo2)
+	jsonNode, err = targetNode.BPlusTreeNodeToJson(tableInfo2)
 	if err != nil {
 		t.Errorf("BPlusTreeNodeToJson Error: %v", err)
+		return
 	}
 	utils.LogDebug(fmt.Sprintf("targetNode: %s", jsonNode))
 	if err != nil {
 		t.Errorf("LoadByteData Error: %v", err)
+		return
 	}
-	isEqual, err := node.CompareBPlusTreeNodesSame(targetNode)
+	isEqual, err = node.CompareBPlusTreeNodesSame(targetNode)
 	if err != nil {
 		t.Error("CompareBPlusTreeNodesSame Expected nil error, but got error")
+		return
 	}
 	if !isEqual {
 		t.Error("CompareBPlusTreeNodesSame Expected true, but got false ")
+		return
 	}
 
 }
@@ -366,11 +467,13 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	key1, err := base.Int64ToByteList(int64(1))
 	if err != nil {
 		t.Errorf("Int64ToByteList Error: %v", err)
+		return
 	}
 
 	key2, err := base.Int64ToByteList(int64(2))
 	if err != nil {
 		t.Errorf("Int64ToByteList Error: %v", err)
+		return
 	}
 
 	node := &BPlusTreeNode{
@@ -396,10 +499,12 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	data, err := node.NodeToByteData(tableInfo1)
 	if err != nil {
 		t.Errorf("Error: %v", err)
+		return
 	}
 	expected := []byte{
-		0x01,                                           // IsLeaf: true
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // BeforeNodeOffset: 50
+		0x01,                                           // IsLeaf: true
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // node value length: 2
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // id: 1
 		0x41, 0x6c, 0x69, 0x63, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //  name: "Alice"
 		0x32, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // age: "20"
@@ -415,6 +520,7 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	utils.LogDebug(fmt.Sprintf("expected []byte  %v", expected))
 	if !bytes.Equal(data, expected) {
 		t.Errorf("Expected: %v \n\t\t\t\t\t  but got: %v", expected, data)
+		return
 	}
 
 	tableInfo2 := &tableSchema.TableMetaInfo{
@@ -441,11 +547,13 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	keyA, err := base.StringToByteList("a")
 	if err != nil {
 		t.Errorf("StringToByteList Error: %v", err)
+		return
 	}
 
 	keyB, err := base.StringToByteList("b")
 	if err != nil {
 		t.Errorf("StringToByteList Error: %v", err)
+		return
 	}
 
 	node = &BPlusTreeNode{
@@ -461,15 +569,18 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	data, err = node.NodeToByteData(tableInfo2)
 	if err != nil {
 		t.Errorf("Error: %v", err)
+		return
 	}
 	expected = []byte{
-		0x00,                                           // IsLeaf: false
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // node length: 3
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
 		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
 		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: null
 	}
 	expected = append(expected, make([]uint8, pageSize-len(expected)-base.DataByteLengthOffset)...)
 	expected = append(expected, []byte{
@@ -478,6 +589,7 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	utils.LogDebug(fmt.Sprintf("expected []byte  %v", expected))
 	if !bytes.Equal(data, expected) {
 		t.Errorf("Expected: %v \n\t\t\t\t\t  but got: %v", expected, data)
+		return
 	}
 }
 

@@ -3,6 +3,7 @@ package base
 const (
 	// 不同类型的字节长度
 	DataByteLengthInt64  = 8
+	DataByteLengthUint64 = 8
 	DataByteLengthString = 4
 	// DataByteLengthOffset offset的字节长度，对应的是int64的字节长度
 	DataByteLengthOffset = DataByteLengthInt64

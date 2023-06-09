@@ -119,6 +119,127 @@ func TestInt64ToByteList(t *testing.T) {
 	}
 }
 
+func TestByteListToUint64(t *testing.T) {
+	// 正整数测试用例
+	data1 := []byte{0x00, 0x00, 0x00, 0xCC, 0xCD, 0x7A, 0xA7, 0x2F}
+	expectedVal1 := uint64(879620695855)
+	val1, err := ByteListToUint64(data1)
+	if err != nil {
+		t.Errorf("ByteListToInt64 failed: %v", err)
+		return
+	}
+	if val1 != expectedVal1 {
+		t.Errorf("ByteListToInt64 failed, expected %d but got %d", expectedVal1, val1)
+		return
+	}
+
+	// 正整数测试用例2
+	data2 := []byte{0x00, 0x00, 0x00, 0x65, 0xF6, 0xE7, 0x3A, 0xE1}
+	expectedVal2 := uint64(437934045921)
+	val2, err := ByteListToUint64(data2)
+	if err != nil {
+		t.Errorf("ByteListToInt64 failed: %v", err)
+		return
+	}
+	if val2 != expectedVal2 {
+		t.Errorf("ByteListToInt64 failed, expected %d but got %d", expectedVal2, val2)
+		return
+	}
+
+	// 长度不足测试用例
+	data := []byte{0x00, 0x0A, 0xA1, 0xFF, 0xFF, 0xFF, 0xFF}
+	_, err = ByteListToUint64(data)
+	if err == nil {
+		t.Error("ByteListToInt64 failed, expected an error when len(data) < 8")
+		return
+	}
+
+	// 长度超出测试用例
+	data = []byte{0x00, 0x0A, 0xA1, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00}
+	_, err = ByteListToUint64(data)
+	if err == nil {
+		t.Error("ByteListToInt64 failed, expected an error when len(data) > 8")
+		return
+	}
+
+	// 边界值测试用例
+	data = []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfb}
+	expectedVal := uint64(18446744073709551611)
+	val, err := ByteListToUint64(data)
+	if err != nil {
+		t.Errorf("ByteListToInt64 failed: %v", err)
+		return
+	}
+	if val != expectedVal {
+		t.Errorf("ByteListToInt64 failed, expected %d but got %d", expectedVal, val)
+		return
+	}
+	// 边界值测试用例2
+	data = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	expectedVal = uint64(1)
+	val, err = ByteListToUint64(data)
+	if err != nil {
+		t.Errorf("ByteListToInt64 failed: %v", err)
+		return
+	}
+	if val != expectedVal {
+		t.Errorf("ByteListToInt64 failed, expected %d but got %d", expectedVal, val)
+		return
+	}
+}
+
+func TestUint64ToByteList(t *testing.T) {
+	// 正常值测试用例
+	expectedData := []byte{0x00, 0x00, 0x00, 0xCC, 0xCD, 0x7A, 0xA7, 0x2F}
+	val := uint64(879620695855)
+	data, err := Uint64ToByteList(val)
+	if err != nil {
+		t.Errorf("Uint64ToByteList failed: %v", err)
+		return
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Errorf("Uint64ToByteList failed, expected %#v but got %#v", expectedData, data)
+		return
+	}
+
+	// 边界值测试用例
+	expectedData = []byte{0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	val = uint64(9223372036854775807)
+	data, err = Uint64ToByteList(val)
+	if err != nil {
+		t.Errorf("Uint64ToByteList failed: %v", err)
+		return
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Errorf("Uint64ToByteList failed, expected %#v but got %#v", expectedData, data)
+		return
+	}
+	// 边界值测试用例2
+	expectedData = []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfb}
+	val = uint64(18446744073709551611)
+	data, err = Uint64ToByteList(val)
+	if err != nil {
+		t.Errorf("Uint64ToByteList failed: %v", err)
+		return
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Errorf("Uint64ToByteList failed, expected %#v but got %#v", expectedData, data)
+		return
+	}
+	// 边界值测试用例3
+	expectedData = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	val = uint64(1)
+	data, err = Uint64ToByteList(val)
+	if err != nil {
+		t.Errorf("Uint64ToByteList failed: %v", err)
+		return
+	}
+	if !reflect.DeepEqual(data, expectedData) {
+		t.Errorf("Uint64ToByteList failed, expected %#v but got %#v", expectedData, data)
+		return
+	}
+}
+
 func TestByteListToString(t *testing.T) {
 	data := []byte{
 		0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0xe4, 0xb8, 0x96, 0xe7, 0x95, 0x8c, 0x21, 0xf0, 0x9f, 0x91, 0x8b,
