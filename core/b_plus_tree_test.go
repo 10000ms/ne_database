@@ -593,6 +593,191 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	}
 }
 
+func TestBPlusTreeNode_BPlusTreeNodeToJson(t *testing.T) {
+	key1, err := base.Int64ToByteList(int64(1))
+	if err != nil {
+		t.Errorf("Int64ToByteList Error: %v", err)
+		return
+	}
+
+	key2, err := base.Int64ToByteList(int64(2))
+	if err != nil {
+		t.Errorf("Int64ToByteList Error: %v", err)
+		return
+	}
+
+	tableInfo1 := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+
+	node := &BPlusTreeNode{
+		IsLeaf:         true,
+		KeysValueList:  []*ValueInfo{{Value: key1}, {Value: key2}},
+		KeysOffsetList: []int64{0, 8},
+		DataValues: []map[string]*ValueInfo{
+			{
+				"name": {Value: []byte("Alice")},
+				"age":  {Value: []byte("20")},
+			},
+			{
+				"name": {Value: []byte("Bob")},
+				"age":  {Value: []byte("22")},
+			},
+		},
+		Offset:           100,
+		BeforeNodeOffset: 50,
+		AfterNodeOffset:  150,
+		ParentOffset:     200,
+	}
+
+	jsonNode, err := node.BPlusTreeNodeToJson(tableInfo1)
+	if err != nil {
+		t.Errorf("BPlusTreeNodeToJson Error: %v", err)
+		return
+	}
+	utils.LogDebug(fmt.Sprintf("targetNode: %s", jsonNode))
+	expJson := "{\"is_leaf\":true,\"keys_offset_list\":[0,8],\"offset\":100,\"before_node_offset\":50,\"after_node_offset\":150,\"parent_offset\":200,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"Bob\"}]}"
+	if jsonNode != expJson {
+		t.Errorf("BPlusTreeNodeToJson no same expect: %s, get: %s", expJson, jsonNode)
+		return
+	}
+
+}
+
+func TestLoadBPlusTreeFromJson(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+}
+
+func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	resourceMap := make(map[int64][]byte, 0)
+
+	m1 := []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // node length: 3
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: null
+	}
+	m1 = append(m1, make([]uint8, pageSize-len(m1)-base.DataByteLengthOffset)...)
+	m1 = append(m1, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, // AfterNodeOffset: 1500
+	}...)
+
+	m2 := []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // node length: 3
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: null
+	}
+	m2 = append(m2, make([]uint8, pageSize-len(m1)-base.DataByteLengthOffset)...)
+	m2 = append(m2, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, // AfterNodeOffset: 1500
+	}...)
+
+	m3 := []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xf4, // BeforeNodeOffset: 500
+		0x00,                                           // IsLeaf: false
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // node length: 3
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x32, // KeysOffset: 50
+		0x61, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "a"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x64, // KeysOffset: 100
+		0x62, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: "b"
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc8, // KeysOffset: 200
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // key: null
+	}
+	m3 = append(m3, make([]uint8, pageSize-len(m1)-base.DataByteLengthOffset)...)
+	m3 = append(m3, []byte{
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0xdc, // AfterNodeOffset: 1500
+	}...)
+
+	// resourceMap放进去这些初始值
+	resourceMap[1000] = m1
+	resourceMap[2000] = m2
+	resourceMap[3000] = m3
+
+	// 创建B+树
+	tree := BPlusTree{
+		Root: &BPlusTreeNode{
+			IsLeaf: false,
+			KeysValueList: []*ValueInfo{
+				{Value: []byte("hello")},
+				{Value: []byte("world")},
+			},
+			KeysOffsetList:   []int64{1000, 2000, 3000},
+			DataValues:       []map[string]*ValueInfo{},
+			Offset:           0,
+			BeforeNodeOffset: 456,
+			AfterNodeOffset:  789,
+			ParentOffset:     0,
+		},
+		TableInfo: &tableSchema.TableMetaInfo{
+			Name: "users",
+			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+				Name:      "id",
+				Length:    8 * 8,
+				FieldType: tableSchema.StringType,
+			},
+			ValueFieldInfo: []*tableSchema.FieldInfo{
+				{
+					Name:      "name",
+					Length:    4 * 20, // 假设最长20字节
+					FieldType: tableSchema.StringType,
+				},
+				{
+					Name:      "age",
+					Length:    4 * 5, // 假设最长20字节
+					FieldType: tableSchema.StringType,
+				},
+			},
+		},
+		LeafOrder:       1,
+		IndexOrder:      1,
+		ResourceManager: resource.InitMemoryConfig(resourceMap),
+	}
+
+	treeJson, err := tree.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	utils.LogDebug(fmt.Sprintf("treeJson: %s", treeJson))
+
+	// TODO
+}
+
 func TestCompareBPlusTreesSame(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
@@ -628,8 +813,8 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 			Name: "users",
 			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
 				Name:      "id",
-				Length:    8,
-				FieldType: tableSchema.Int64Type,
+				Length:    8 * 8,
+				FieldType: tableSchema.StringType,
 			},
 			ValueFieldInfo: []*tableSchema.FieldInfo{
 				{
@@ -675,8 +860,8 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 			Name: "users",
 			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
 				Name:      "id",
-				Length:    8,
-				FieldType: tableSchema.Int64Type,
+				Length:    8 * 8,
+				FieldType: tableSchema.StringType,
 			},
 			ValueFieldInfo: []*tableSchema.FieldInfo{
 				{

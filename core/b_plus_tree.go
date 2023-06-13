@@ -393,7 +393,7 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableI
 	return nil
 }
 
-// NodeByteDataLength 判断一个结点转化成为byte数据的长度
+// NodeByteDataLength 判断一个结点转化成为byte数据的长度 TODO: 目前这个方法意义不能，没有使用场景
 func (node *BPlusTreeNode) NodeByteDataLength(tree *BPlusTree) int {
 	// 基础长度，一个是判断是否是为leaf结点的位，两个是前后相连偏移位
 	baseLength := 1 + base.DataByteLengthOffset + base.DataByteLengthOffset
@@ -1026,7 +1026,7 @@ func (tree *BPlusTree) BPlusTreeToJson() (string, base.StandardError) {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeToJson] tree.LoadAllNode 错误: %s", err.Error()))
 	}
 	for _, node := range allNode {
-		if node != nil {
+		if node != nil && node.Offset != tree.Root.Offset {
 			b := BPlusTreeNodeJSON{
 				BPlusTreeNode: *node,
 			}
