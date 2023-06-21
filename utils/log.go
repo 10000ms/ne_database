@@ -170,6 +170,10 @@ func LogSystem(value ...interface{}) {
 	log("", value, fgCyan, 2)
 }
 
+func LogWithoutInfo(value ...interface{}) {
+	log("", value, fgMagenta, 2)
+}
+
 func ToJSON(data interface{}) string {
 	dataByte, err := json.Marshal(data)
 	if err != nil {

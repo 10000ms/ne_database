@@ -70,6 +70,10 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 	return nil
 }
 
+func (info *TableMetaInfo) CompareTableInfo(info2 *TableMetaInfo) (bool, base.StandardError) {
+	// TODO
+}
+
 func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 	var err base.StandardError
 
