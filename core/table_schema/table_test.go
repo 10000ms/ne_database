@@ -1,11 +1,13 @@
 package tableSchema
 
 import (
-	"ne_database/core/base"
+	"os"
 	"testing"
+
+	"ne_database/core/base"
 )
 
-func TestFieldInfoVerification(t *testing.T) {
+func TestFieldInfo_Verification(t *testing.T) {
 	// 测试用例1：有效的 int64 类型长度
 	info := &FieldInfo{
 		Name:      "test_field",
@@ -108,5 +110,240 @@ func TestInitTableMetaInfoByJson(t *testing.T) {
 	expErr = base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, nil)
 	if err.GetErrorCode() != expErr.GetErrorCode() {
 		t.Errorf("InitTableMetaInfoByJson should return error %s, but got %s", expErr.GetErrorCode(), err.GetErrorCode())
+	}
+}
+
+func TestFieldInfo_CompareFieldInfo(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+
+	info := &FieldInfo{
+		Name:         "test_field",
+		Length:       8,
+		FieldType:    Int64Type,
+		DefaultValue: "1",
+	}
+
+	info2 := &FieldInfo{
+		Name:         "test_field",
+		Length:       8,
+		FieldType:    Int64Type,
+		DefaultValue: "1",
+	}
+
+	isSame := info.CompareFieldInfo(info2)
+	if !isSame {
+		t.Error("CompareFieldInfo Expected true, but got false")
+		return
+	}
+
+	info3 := &FieldInfo{
+		Name:         "test_field1",
+		Length:       8,
+		FieldType:    Int64Type,
+		DefaultValue: "1",
+	}
+
+	isSame = info.CompareFieldInfo(info3)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	info4 := &FieldInfo{
+		Name:         "test_field",
+		Length:       7,
+		FieldType:    Int64Type,
+		DefaultValue: "1",
+	}
+
+	isSame = info.CompareFieldInfo(info4)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	info5 := &FieldInfo{
+		Name:         "test_field",
+		Length:       8,
+		FieldType:    StringType,
+		DefaultValue: "1",
+	}
+
+	isSame = info.CompareFieldInfo(info5)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	info6 := &FieldInfo{
+		Name:         "test_field",
+		Length:       8,
+		FieldType:    Int64Type,
+		DefaultValue: "2",
+	}
+
+	isSame = info.CompareFieldInfo(info6)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+}
+
+func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+
+	tableInfo1 := &TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: StringType,
+			},
+		},
+	}
+
+	tableInfo2 := &TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: StringType,
+			},
+		},
+	}
+
+	isSame := tableInfo1.CompareTableInfo(tableInfo2)
+	if !isSame {
+		t.Error("CompareFieldInfo Expected true, but got false")
+		return
+	}
+
+	tableInfo3 := &TableMetaInfo{
+		Name: "users1",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: StringType,
+			},
+		},
+	}
+
+	isSame = tableInfo1.CompareTableInfo(tableInfo3)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	tableInfo4 := &TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "i",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: StringType,
+			},
+		},
+	}
+
+	isSame = tableInfo1.CompareTableInfo(tableInfo4)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	tableInfo5 := &TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+		},
+	}
+
+	isSame = tableInfo1.CompareTableInfo(tableInfo5)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
+	}
+
+	tableInfo6 := &TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: Int64Type,
+		},
+		ValueFieldInfo: []*FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: StringType,
+			},
+			{
+				Name:      "age",
+				Length:    8,
+				FieldType: Int64Type,
+			},
+		},
+	}
+
+	isSame = tableInfo1.CompareTableInfo(tableInfo6)
+	if isSame {
+		t.Error("CompareFieldInfo Expected false, but got true")
+		return
 	}
 }

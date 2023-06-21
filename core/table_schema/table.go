@@ -13,7 +13,7 @@ type FieldInfo struct {
 	Name         string   `json:"name"`
 	Length       int      `json:"length"`
 	FieldType    MetaType `json:"-"`
-	DefaultValue string   `json:"default"`
+	DefaultValue string   `json:"default"` // 这个值是建表语句的原始值，使用需要进行处理
 	RawFieldType string   `json:"type"`
 }
 
@@ -21,6 +21,39 @@ type TableMetaInfo struct {
 	Name                string       `json:"name"`
 	PrimaryKeyFieldInfo *FieldInfo   `json:"primary_key"`
 	ValueFieldInfo      []*FieldInfo `json:"value"`
+}
+
+// Verification 值配置校验
+func (info *FieldInfo) Verification() base.StandardError {
+	t := info.FieldType
+	switch t.GetType() {
+	case base.DBDataTypeInt64:
+		if info.Length != base.DataByteLengthInt64 {
+			utils.LogError(fmt.Sprintf("[Verification] 类型<%s>校验错误, 类型长度错误: %d", t.GetType(), info.Length))
+			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("int64类型长度错误: %d", info.Length))
+		}
+	}
+	return nil
+}
+
+func (info *FieldInfo) CompareFieldInfo(info2 *FieldInfo) bool {
+	if info.Name != info2.Name {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：名称不一致")
+		return false
+	}
+	if info.Length != info2.Length {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：长度不一致")
+		return false
+	}
+	if info.FieldType != info2.FieldType {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：类型不一致")
+		return false
+	}
+	if info.DefaultValue != info2.DefaultValue {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：默认值不一致")
+		return false
+	}
+	return true
 }
 
 func (info *TableMetaInfo) ValueFieldInfoMap() (map[string]*FieldInfo, base.StandardError) {
@@ -70,8 +103,32 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 	return nil
 }
 
-func (info *TableMetaInfo) CompareTableInfo(info2 *TableMetaInfo) (bool, base.StandardError) {
-	// TODO
+func (info *TableMetaInfo) CompareTableInfo(info2 *TableMetaInfo) bool {
+	// 1. 对比name
+	if info.Name != info2.Name {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表名称不一致")
+		return false
+	}
+
+	// 2. 对比PrimaryKeyFieldInfo
+	if !info.PrimaryKeyFieldInfo.CompareFieldInfo(info2.PrimaryKeyFieldInfo) {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表主键不一致")
+		return false
+	}
+
+	// 3. 对比ValueFieldInfo
+	if len(info.ValueFieldInfo) != len(info2.ValueFieldInfo) {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表值数量不一致")
+		return false
+	}
+	for i, v1 := range info.ValueFieldInfo {
+		v2 := info2.ValueFieldInfo[i]
+		if !v1.CompareFieldInfo(v2) {
+			utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表值不一致")
+			return false
+		}
+	}
+	return true
 }
 
 func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
@@ -93,19 +150,6 @@ func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 				utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
 				return err
 			}
-		}
-	}
-	return nil
-}
-
-// Verification 值配置校验
-func (info *FieldInfo) Verification() base.StandardError {
-	t := info.FieldType
-	switch t.GetType() {
-	case base.DBDataTypeInt64:
-		if info.Length != base.DataByteLengthInt64 {
-			utils.LogError(fmt.Sprintf("[Verification] 类型<%s>校验错误, 类型长度错误: %d", t.GetType(), info.Length))
-			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("int64类型长度错误: %d", info.Length))
 		}
 	}
 	return nil

@@ -1044,7 +1044,21 @@ func (tree *BPlusTree) BPlusTreeToJson() (string, base.StandardError) {
 func (tree *BPlusTree) CompareBPlusTreesSame(tree2 *BPlusTree) (bool, base.StandardError) {
 	var err base.StandardError
 
-	// TODO 先对比两tree的table一致否
+	if err = tree.TableInfo.Verification(); err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[CompareBPlusTrees] tree table info 非法"))
+		return false, err
+	}
+
+	if err = tree2.TableInfo.Verification(); err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[CompareBPlusTrees] tree2 table info 非法"))
+		return false, err
+	}
+
+	// 两树表不一致，则两个树不可能相同
+	if !tree.TableInfo.CompareTableInfo(tree2.TableInfo) {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTrees] 两树表不一致"))
+		return false, nil
+	}
 
 	// 如果阶数不同，则两个树不可能相同
 	if tree.LeafOrder != tree2.LeafOrder || tree.IndexOrder != tree2.IndexOrder {

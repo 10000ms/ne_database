@@ -1185,6 +1185,54 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	if isSame {
 		t.Error("Expected false, but got true ")
 	}
+
+	tree5 := BPlusTree{
+		Root: &BPlusTreeNode{
+			IsLeaf: false,
+			KeysValueList: []*ValueInfo{
+				{Value: []byte("aa")},
+				{Value: []byte("bb")},
+			},
+			KeysOffsetList:   []int64{1000, 2000, 3000},
+			DataValues:       nil,
+			Offset:           0,
+			BeforeNodeOffset: 456,
+			AfterNodeOffset:  789,
+			ParentOffset:     0,
+		},
+		TableInfo: &tableSchema.TableMetaInfo{
+			Name: "users",
+			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+				Name:      "id",
+				Length:    4 * 2,
+				FieldType: tableSchema.StringType,
+			},
+			ValueFieldInfo: []*tableSchema.FieldInfo{
+				{
+					Name:      "name",
+					Length:    4 * 5, // 假设最长5字
+					FieldType: tableSchema.StringType,
+				},
+				{
+					Name:      "age2",
+					Length:    4 * 2, // 假设最长2字
+					FieldType: tableSchema.StringType,
+				},
+			},
+		},
+		LeafOrder:       1,
+		IndexOrder:      1,
+		ResourceManager: resource.InitMemoryConfig(resourceMap),
+	}
+
+	// 对比两个树，期望为 false
+	isSame, err = tree1.CompareBPlusTreesSame(&tree5)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	if isSame {
+		t.Error("Expected false, but got true ")
+	}
 }
 
 func TestCompareBPlusTreeNodesSame(t *testing.T) {
