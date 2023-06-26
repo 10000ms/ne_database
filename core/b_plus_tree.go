@@ -558,15 +558,31 @@ func (tree *BPlusTree) LoadAllNode() (map[int64]*BPlusTreeNode, base.StandardErr
 }
 
 // Insert 插入键值对
-func (tree *BPlusTree) Insert(key int64, value interface{}) {
+func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 	// 1. 查找插入位置
 	curNode := tree.Root
 	for !curNode.IsLeaf {
-		index := 0
-		for ; index < len(curNode.KeysValueList); index++ {
-			// TODO
+		for index := 0; index < len(curNode.KeysValueList); index++ {
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] Greater 错误: %s", err.Error()))
+				return err
+			}
+			if greater {
+				break
+			}
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] Equal 错误: %s", err.Error()))
+				return err
+			}
+			if equal {
+				break
+			}
 		}
 	}
+	// TODO
+
 	// 2. 向叶子节点插入键值对
 	// 3. 如果该叶子节点满了，进行分裂操作
 	// 3.1 分裂叶子节点

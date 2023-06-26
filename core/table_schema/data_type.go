@@ -3,6 +3,7 @@ package tableSchema
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"ne_database/core/base"
 	"ne_database/utils"
@@ -23,7 +24,12 @@ type MetaType interface {
 	LengthPadding([]byte, int) ([]byte, base.StandardError)
 	// TrimRaw 可变长度数据类型进行修整
 	TrimRaw([]byte) []byte
+	// Greater 数据对比: 大于
 	Greater([]byte, []byte) (bool, base.StandardError)
+	// Equal 数据对比: 等于
+	Equal([]byte, []byte) (bool, base.StandardError)
+	// Less 数据对比: 小于
+	Less([]byte, []byte) (bool, base.StandardError)
 }
 
 type int64Type struct {
@@ -72,8 +78,45 @@ func (t int64Type) TrimRaw(data []byte) []byte {
 }
 
 func (t int64Type) Greater(data1 []byte, data2 []byte) (bool, base.StandardError) {
-	// TODO
-	return false, nil
+	value1, err := base.ByteListToInt64(data1)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	value2, err := base.ByteListToInt64(data2)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	return value1 > value2, nil
+}
+
+func (t int64Type) Equal(data1 []byte, data2 []byte) (bool, base.StandardError) {
+	value1, err := base.ByteListToInt64(data1)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	value2, err := base.ByteListToInt64(data2)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	return value1 == value2, nil
+}
+
+func (t int64Type) Less(data1 []byte, data2 []byte) (bool, base.StandardError) {
+	value1, err := base.ByteListToInt64(data1)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	value2, err := base.ByteListToInt64(data2)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[int64Type.int64Type.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	return value1 < value2, nil
 }
 
 type stringType struct {
@@ -129,7 +172,50 @@ func (t stringType) TrimRaw(data []byte) []byte {
 }
 
 func (t stringType) Greater(data1 []byte, data2 []byte) (bool, base.StandardError) {
-	// TODO
+	value1 := string(data1)
+	value2 := string(data2)
+	result := strings.Compare(value1, value2)
+
+	switch result {
+	case -1:
+		return false, nil
+	case 0:
+		return false, nil
+	case 1:
+		return true, nil
+	}
+	return false, nil
+}
+
+func (t stringType) Equal(data1 []byte, data2 []byte) (bool, base.StandardError) {
+	value1 := string(data1)
+	value2 := string(data2)
+	result := strings.Compare(value1, value2)
+
+	switch result {
+	case -1:
+		return false, nil
+	case 0:
+		return true, nil
+	case 1:
+		return false, nil
+	}
+	return false, nil
+}
+
+func (t stringType) Less(data1 []byte, data2 []byte) (bool, base.StandardError) {
+	value1 := string(data1)
+	value2 := string(data2)
+	result := strings.Compare(value1, value2)
+
+	switch result {
+	case -1:
+		return true, nil
+	case 0:
+		return false, nil
+	case 1:
+		return false, nil
+	}
 	return false, nil
 }
 
