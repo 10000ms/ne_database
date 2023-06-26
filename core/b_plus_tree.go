@@ -143,7 +143,7 @@ func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableSchema.Tab
 
 	pkKeyInfo := tableInfo.PrimaryKeyFieldInfo.FieldType
 	for _, v := range n.KeysValueList {
-		n.KeysStringValue = append(n.KeysStringValue, pkKeyInfo.LogString(v.Value))
+		n.KeysStringValue = append(n.KeysStringValue, pkKeyInfo.StringValue(v.Value))
 	}
 	valueKeyInfoMap, err := tableInfo.ValueFieldInfoMap()
 	if err != nil {
@@ -153,7 +153,7 @@ func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableSchema.Tab
 		d := make(map[string]string, 0)
 		for name, v := range row {
 			if valueKeyInfo, ok := valueKeyInfoMap[name]; ok {
-				d[name] = valueKeyInfo.FieldType.LogString(v.Value)
+				d[name] = valueKeyInfo.FieldType.StringValue(v.Value)
 			} else {
 				utils.LogError(fmt.Sprintf("[GetValueAndKeyStringValue] 未知 value name: %s", name))
 			}
@@ -196,17 +196,12 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 
 	fieldValue := data[startIndex+base.DataByteLengthOffset : startIndex+base.DataByteLengthOffset+primaryKeyInfo.Length]
 	fieldType := primaryKeyInfo.FieldType
-	if fieldType.IsNull(fieldValue) {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 主键为空，返回")
-		return &r, nil
-	} else {
-		r.PrimaryKeySuccess = true
-		r.PrimaryKey = &ValueInfo{
-			Value: fieldType.TrimRaw(fieldValue),
-		}
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
-		return &r, nil
+	r.PrimaryKeySuccess = true
+	r.PrimaryKey = &ValueInfo{
+		Value: fieldType.TrimRaw(fieldValue),
 	}
+	utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)("[getNoLeafNodeByteDataReadLoopData] 全部解析完成，返回 ", utils.ToJSON(r))
+	return &r, nil
 }
 
 // getLeafNodeByteDataReadLoopData
@@ -243,11 +238,6 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 	// 2. 先获取主键信息
 	pkValue := data[startIndex : startIndex+primaryKeyInfo.Length]
 	pkType := primaryKeyInfo.FieldType
-	if pkType.IsNull(pkValue) {
-		errMsg := "主键数据为空"
-		utils.LogError("[getLeafNodeByteDataReadLoopData] " + errMsg)
-		return &r, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
-	}
 	r.PrimaryKeySuccess = true
 	r.PrimaryKey = &ValueInfo{
 		Value: pkType.TrimRaw(pkValue),
@@ -351,11 +341,7 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, parentOffset int64, tableI
 				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
 			}
 			node.KeysOffsetList = append(node.KeysOffsetList, loopData.Offset)
-			if loopData.PrimaryKeySuccess == false && i != nodeValueLengthInt-1 {
-				errMsg := "PrimaryKey 获取失败"
-				utils.LogError("[BPlusTreeNode LoadByteData] " + errMsg)
-				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
-			} else if loopData.PrimaryKeySuccess == true {
+			if i != nodeValueLengthInt-1 {
 				node.KeysValueList = append(node.KeysValueList, loopData.PrimaryKey)
 			}
 		}
@@ -573,6 +559,19 @@ func (tree *BPlusTree) LoadAllNode() (map[int64]*BPlusTreeNode, base.StandardErr
 
 // Insert 插入键值对
 func (tree *BPlusTree) Insert(key int64, value interface{}) {
+	// 1. 查找插入位置
+	curNode := tree.Root
+	for !curNode.IsLeaf {
+		index := 0
+		for ; index < len(curNode.KeysValueList); index++ {
+			// TODO
+		}
+	}
+	// 2. 向叶子节点插入键值对
+	// 3. 如果该叶子节点满了，进行分裂操作
+	// 3.1 分裂叶子节点
+	// 3.2 更新父节点的键列表和子节点列表
+
 	//// 1. 查找插入位置
 	//curNode := tree.Root
 	//for !curNode.IsLeaf {
@@ -812,7 +811,7 @@ func (node *BPlusTreeNode) SprintBPlusTreeNode(tree *BPlusTree) (string, base.St
 		for i := 0; i < len(node.KeysValueList); i++ {
 			offsetString := fmt.Sprint(node.KeysOffsetList[i])
 			keyType := tree.TableInfo.PrimaryKeyFieldInfo.FieldType
-			keyString := keyType.LogString(node.KeysValueList[i].Value)
+			keyString := keyType.StringValue(node.KeysValueList[i].Value)
 			r += fmt.Sprintf("offset: <%s> <== key<%s:%d>: <%s>; ", offsetString, tree.TableInfo.PrimaryKeyFieldInfo.Name, i, keyString)
 		}
 		lastOffsetString := fmt.Sprint(node.KeysOffsetList[len(node.KeysOffsetList)-1])
@@ -832,11 +831,11 @@ func (node *BPlusTreeNode) SprintBPlusTreeNode(tree *BPlusTree) (string, base.St
 		for i := 0; i < len(node.KeysValueList); i++ {
 			r += fmt.Sprintf("item<%d>(", i)
 			keyType := tree.TableInfo.PrimaryKeyFieldInfo.FieldType
-			keyString := keyType.LogString(node.KeysValueList[i].Value)
+			keyString := keyType.StringValue(node.KeysValueList[i].Value)
 			r += fmt.Sprintf("pk<%s>: %s", tree.TableInfo.PrimaryKeyFieldInfo.Name, keyString)
 			for name, v := range node.DataValues[i] {
 				if valueTableInfo, ok := valuesTypeMap[name]; ok {
-					valueString := valueTableInfo.FieldType.LogString(v.Value)
+					valueString := valueTableInfo.FieldType.StringValue(v.Value)
 					r += fmt.Sprintf("; value<%s>: <%s>", name, valueString)
 				}
 

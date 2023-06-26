@@ -88,7 +88,7 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	if !result.OffsetSuccess {
 		t.Errorf("expected offsetSuccess to be true, but got false")
 	}
-	if result.PrimaryKeySuccess {
+	if !result.PrimaryKeySuccess {
 		t.Errorf("expected primaryKeySuccess to be true, but got false")
 	}
 
