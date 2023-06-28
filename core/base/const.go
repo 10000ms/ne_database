@@ -43,4 +43,5 @@ const (
 	ErrorBaseCodeInnerTypeError      = "inner_type_error"
 	ErrorBaseCodeIOError             = "io"
 	ErrorBaseCodeNetworkError        = "network"
+	ErrorBaseCodeCoreLogicError      = "code_logic_error"
 )

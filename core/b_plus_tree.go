@@ -667,10 +667,9 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			newNode.DataValues = append(newNode.DataValues, curNode.DataValues[splitIndex:]...)
 			curNode.DataValues = curNode.DataValues[:splitIndex]
 		} else {
-			// TODO: 需要考虑 KeysOffsetList 和 KeysValueList 长度不匹配导致的问题
 			newNode.KeysOffsetList = make([]int64, 0)
 			newNode.KeysOffsetList = append(newNode.KeysOffsetList, curNode.KeysOffsetList[splitIndex:]...)
-			curNode.KeysOffsetList = curNode.KeysOffsetList[:splitIndex]
+			curNode.KeysOffsetList = curNode.KeysOffsetList[:splitIndex+1]
 		}
 
 		// 记录 curNode
@@ -697,7 +696,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] tree.OffsetLoadNode 错误: %s", err.Error()))
 				return err
 			}
-			beforeNode.AfterNodeOffset = nextEmptyOffset
+			beforeNode.AfterNodeOffset = newNode.Offset
 			beforeNodeByte, err := beforeNode.NodeToByteData(tree.TableInfo)
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] beforeNode.NodeToByteData 错误: %s", err.Error()))
@@ -708,7 +707,13 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 
 		// 3.2. 更新父节点的键列表和子节点列表
 		if curNode.ParentOffset == base.OffsetNull {
-			// 父结点是root的话
+			// 结点是root
+
+			if curNode.Offset != base.OffsetNull && curNode != tree.Root {
+				errMsg := fmt.Sprintf("curNode应该为root而实际不为")
+				utils.LogError(fmt.Sprintf("[BPlusTree.Insert] %s", errMsg))
+				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeCoreLogicError, fmt.Errorf(errMsg))
+			}
 
 			// curNode 需要分配新的 offset 再记录
 			nextEmptyOffset, err := tree.ResourceManager.GetNextEmptyOffset()
@@ -734,10 +739,10 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			}
 			newRoot.KeysValueList = []*ValueInfo{
 				{
-					Value: curNode.KeysValueList[0].Value,
+					Value: newNode.KeysValueList[0].Value,
 				},
 			}
-			newRoot.KeysOffsetList = []int64{newNode.Offset, curNode.Offset}
+			newRoot.KeysOffsetList = []int64{curNode.Offset, newNode.Offset}
 
 			tree.Root = newRoot
 
@@ -756,7 +761,35 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				return err
 			}
 
-			// TODO
+			// 更新父节点的 KeysValueList 和 KeysOffsetList
+			newKey := newNode.KeysValueList[0].Value
+			index := 0
+			for ; index < len(parentNode.KeysValueList); index++ {
+				greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(parentNode.KeysValueList[index].Value, newKey)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] Greater 错误: %s", err.Error()))
+					return err
+				}
+				if greater {
+					break
+				}
+				equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(parentNode.KeysValueList[index].Value, newKey)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] Equal 错误: %s", err.Error()))
+					return err
+				}
+				if equal {
+					break
+				}
+			}
+			parentNode.KeysValueList = append(curNode.KeysValueList, nil)
+			parentNode.KeysOffsetList = append(curNode.KeysOffsetList, 0)
+			copy(parentNode.KeysValueList[index+1:], parentNode.KeysValueList[index:])
+			copy(parentNode.KeysOffsetList[index+1:], parentNode.KeysOffsetList[index:])
+			parentNode.KeysValueList[index] = &ValueInfo{
+				Value: newKey,
+			}
+			parentNode.KeysOffsetList[index] = newNode.Offset
 
 			// 判断父结点是否需要处理
 			if (!parentNode.IsLeaf && len(parentNode.KeysOffsetList) == tree.IndexOrder) || (parentNode.IsLeaf && len(parentNode.KeysValueList) == tree.LeafOrder) {
@@ -782,47 +815,12 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 		}
 
 	}
-
-	//	// 3.2. 更新父节点的键列表和子节点列表
-	//	if parent == nil {
-	//		// 创建新的根节点
-	//		newRoot := &BPlusTreeNode{
-	//			IsLeaf: false,
-	//			Keys:   []int64{newNode.Keys[0]},
-	//			Child:  []*BPlusTreeNode{curNode, newNode},
-	//			Parent: nil,
-	//		}
-	//		curNode.Parent = newRoot
-	//		newNode.Parent = newRoot
-	//		tree.Root = newRoot
-	//	} else {
-	//		// 更新父节点的键列表和子节点列表
-	//		newNode.Parent = parent
-	//		newKey := newNode.Keys[0]
-	//		index := 0
-	//		for ; index < len(parent.Keys); index++ {
-	//			if parent.Keys[index] > newKey {
-	//				break
-	//			}
-	//		}
-	//		parent.Keys = append(parent.Keys, 0)
-	//		parent.Child = append(parent.Child, nil)
-	//		copy(parent.Keys[index+1:], parent.Keys[index:])
-	//		copy(parent.Child[index+1:], parent.Child[index:])
-	//		parent.Keys[index] = newKey
-	//		parent.Child[index+1] = newNode
-	//		if len(parent.Keys) == tree.Order {
-	//			curNode = parent
-	//		} else {
-	//			break
-	//		}
-	//	}
-	//}
+	return nil
 }
 
 // Update 更新值
 func (tree *BPlusTree) Update(key int64, value interface{}) {
-	// TODO
+
 }
 
 // Delete 删除键值对
