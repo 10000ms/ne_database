@@ -11,6 +11,8 @@ const (
 	// OffsetNull 空offset对应的值
 	OffsetNull = int64(-1)
 
+	RootOffsetValue = int64(0)
+
 	NodeTypeIsLeaf    = 1
 	NodeTypeIsNotLeaf = 0
 

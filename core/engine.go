@@ -1,5 +1,7 @@
 package core
 
+import "ne_database/core/config"
+
 type Engine struct {
 }
 
@@ -7,7 +9,7 @@ type Engine struct {
 func (e *Engine) Init() error {
 	var err error
 
-	err = CoreConfig.Init()
+	err = config.CoreConfig.Init()
 	if err != nil {
 		return err
 	}

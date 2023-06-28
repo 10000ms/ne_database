@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ne_database/core/base"
+	"ne_database/core/config"
 	"ne_database/core/resource"
 	tableSchema "ne_database/core/table_schema"
 	"ne_database/utils"
@@ -253,7 +254,7 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
-	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	// 构造测试数据1
 	data := []byte{
@@ -441,7 +442,7 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
-	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	tableInfo1 := &tableSchema.TableMetaInfo{
 		Name: "users",
@@ -666,7 +667,7 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
-	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	resourceMap := make(map[int64][]byte, 0)
 
@@ -796,7 +797,7 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
-	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	resourceMap := make(map[int64][]byte, 0)
 
@@ -923,7 +924,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
-	_ = CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	resourceMap := make(map[int64][]byte, 0)
 
