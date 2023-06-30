@@ -567,6 +567,18 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 		err             base.StandardError
 	)
 
+	if key == nil || len(key) == 0 {
+		errMsg := fmt.Sprintf("key 数据为空")
+		utils.LogError(fmt.Sprintf("[BPlusTree.Insert] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+	}
+
+	if value == nil || len(value) != len(tree.TableInfo.ValueFieldInfo) {
+		errMsg := fmt.Sprintf("value 数据为空或数量不对")
+		utils.LogError(fmt.Sprintf("[BPlusTree.Insert] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+	}
+
 	// 1. 查找插入位置
 	for !curNode.IsLeaf {
 		index := 0
@@ -687,6 +699,8 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			return err
 		}
 		waitWriterMap[newNode.Offset] = newNodeByte
+
+		utils.LogError(fmt.Sprintf("sdads %s", utils.ToJSON(curNode)))
 
 		if curNode.BeforeNodeOffset != base.OffsetNull {
 			// curNode 的 BeforeNode 需要更新 AfterNodeOffset
@@ -971,7 +985,7 @@ func (node *BPlusTreeNode) SprintBPlusTreeNode(tree *BPlusTree) (string, base.St
 			utils.LogError("[SprintBPlusTreeNode] " + errMsg)
 			return "", base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 		}
-		r += fmt.Sprintf("[Leaf结点<%d>] : ", node.Offset)
+		r += fmt.Sprintf("[Index结点<%d>] : ", node.Offset)
 		for i := 0; i < len(node.KeysValueList); i++ {
 			offsetString := fmt.Sprint(node.KeysOffsetList[i])
 			keyType := tree.TableInfo.PrimaryKeyFieldInfo.FieldType
@@ -991,7 +1005,7 @@ func (node *BPlusTreeNode) SprintBPlusTreeNode(tree *BPlusTree) (string, base.St
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[SprintBPlusTreeNode.tree.TableInfo.ValueFieldInfoMap]错误: %s", err.Error()))
 			return "", err
 		}
-		r += fmt.Sprintf("[index结点<%d>] : ", node.Offset)
+		r += fmt.Sprintf("[Leaf结点<%d>] : ", node.Offset)
 		for i := 0; i < len(node.KeysValueList); i++ {
 			r += fmt.Sprintf("item<%d>(", i)
 			keyType := tree.TableInfo.PrimaryKeyFieldInfo.FieldType

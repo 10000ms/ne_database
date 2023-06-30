@@ -1540,3 +1540,171 @@ func TestCompareBPlusTreeNodesSame(t *testing.T) {
 		t.Error("Expected false, but got true ")
 	}
 }
+
+func TestBPlusTree_Insert(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	var err base.StandardError
+
+	// 创建B+树
+	tree := BPlusTree{
+		Root: &BPlusTreeNode{
+			IsLeaf:           true,
+			KeysValueList:    []*ValueInfo{},
+			KeysOffsetList:   nil,
+			DataValues:       []map[string]*ValueInfo{},
+			Offset:           base.RootOffsetValue,
+			BeforeNodeOffset: base.OffsetNull,
+			AfterNodeOffset:  base.OffsetNull,
+			ParentOffset:     base.OffsetNull,
+		},
+		TableInfo: &tableSchema.TableMetaInfo{
+			Name: "users",
+			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+				Name:      "id",
+				Length:    8,
+				FieldType: tableSchema.Int64Type,
+			},
+			ValueFieldInfo: []*tableSchema.FieldInfo{
+				{
+					Name:      "name",
+					Length:    4 * 5, // 假设最长5字
+					FieldType: tableSchema.StringType,
+				},
+				{
+					Name:      "age",
+					Length:    4 * 2, // 假设最长2字
+					FieldType: tableSchema.StringType,
+				},
+			},
+		},
+		LeafOrder:       4,
+		IndexOrder:      4,
+		ResourceManager: resource.InitMemoryConfig(nil),
+	}
+
+	err = tree.Insert([]byte{}, [][]byte{})
+	if err == nil {
+		t.Error("Expected error, but got nil")
+	}
+
+	byteListKeyValue1 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+	err = tree.Insert(byteListKeyValue1, [][]byte{})
+	if err == nil {
+		t.Error("Expected error, but got nil")
+	}
+
+	byteListDataValue1 := [][]byte{
+		{0x41, 0x6c, 0x69, 0x63, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //  name: "Alice"
+		{0x32, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},                                                                         // age: "20"
+	}
+	err = tree.Insert([]byte{}, byteListDataValue1)
+	if err == nil {
+		t.Error("Expected error, but got nil")
+	}
+
+	err = tree.Insert(byteListKeyValue1, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+	}
+	err = tree.PrintBPlusTree()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+	}
+}
+
+func TestBPlusTree_Insert_2(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	var err base.StandardError
+
+	// 创建B+树
+	tree := BPlusTree{
+		Root: &BPlusTreeNode{
+			IsLeaf:           true,
+			KeysValueList:    []*ValueInfo{},
+			KeysOffsetList:   nil,
+			DataValues:       []map[string]*ValueInfo{},
+			Offset:           base.RootOffsetValue,
+			BeforeNodeOffset: base.OffsetNull,
+			AfterNodeOffset:  base.OffsetNull,
+			ParentOffset:     base.OffsetNull,
+		},
+		TableInfo: &tableSchema.TableMetaInfo{
+			Name: "users",
+			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+				Name:      "id",
+				Length:    8,
+				FieldType: tableSchema.Int64Type,
+			},
+			ValueFieldInfo: []*tableSchema.FieldInfo{
+				{
+					Name:      "name",
+					Length:    4 * 5, // 假设最长5字
+					FieldType: tableSchema.StringType,
+				},
+				{
+					Name:      "age",
+					Length:    4 * 2, // 假设最长2字
+					FieldType: tableSchema.StringType,
+				},
+			},
+		},
+		LeafOrder:       4,
+		IndexOrder:      4,
+		ResourceManager: resource.InitMemoryConfig(nil),
+	}
+
+	byteListKeyValue1 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
+
+	byteListDataValue1 := [][]byte{
+		{0x41, 0x6c, 0x69, 0x63, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, //  name: "Alice"
+		{0x32, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},                                                                         // age: "20"
+	}
+	err = tree.Insert(byteListKeyValue1, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+
+	byteListKeyValue2 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}
+	err = tree.Insert(byteListKeyValue2, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+
+	byteListKeyValue3 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}
+	err = tree.Insert(byteListKeyValue3, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+
+	byteListKeyValue4 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04}
+	err = tree.Insert(byteListKeyValue4, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+
+	byteListKeyValue5 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05}
+	err = tree.Insert(byteListKeyValue5, byteListDataValue1)
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+	err = tree.PrintBPlusTree()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+}
