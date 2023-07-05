@@ -7,5 +7,6 @@ import (
 type IOManager interface {
 	Reader(offset int64) ([]byte, base.StandardError)
 	Writer(offset int64, data []byte) (bool, base.StandardError)
-	GetNextEmptyOffset() (int64, base.StandardError)
+	Delete(offset int64) (bool, base.StandardError)
+	AssignEmptyPage() (int64, base.StandardError)
 }

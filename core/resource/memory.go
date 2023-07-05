@@ -33,7 +33,12 @@ func (c *MemoryManager) Writer(offset int64, data []byte) (bool, base.StandardEr
 	return true, nil
 }
 
-func (c *MemoryManager) GetNextEmptyOffset() (int64, base.StandardError) {
+func (c *MemoryManager) Delete(offset int64) (bool, base.StandardError) {
+	delete(c.Storage, offset)
+	return true, nil
+}
+
+func (c *MemoryManager) AssignEmptyPage() (int64, base.StandardError) {
 	var (
 		initNum       = 1
 		pageSize      = config.CoreConfig.PageSize
@@ -44,6 +49,7 @@ func (c *MemoryManager) GetNextEmptyOffset() (int64, base.StandardError) {
 	for {
 		nextOffset := getNextOffset(initNum, pageSize)
 		if _, ok := c.Storage[nextOffset]; !ok {
+			c.Storage[nextOffset] = make([]byte, 0)
 			return nextOffset, nil
 		}
 		initNum += 1
