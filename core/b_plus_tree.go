@@ -154,7 +154,7 @@ func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableSchema.Tab
 		d := make(map[string]string, 0)
 		for name, v := range row {
 			if valueKeyInfo, ok := valueKeyInfoMap[name]; ok {
-				d[name] = valueKeyInfo.FieldType.StringValue(v.Value)
+				d[name] = valueKeyInfo.FieldType.StringValue(valueKeyInfo.FieldType.TrimRaw(v.Value))
 			} else {
 				utils.LogError(fmt.Sprintf("[GetValueAndKeyStringValue] 未知 value name: %s", name))
 			}
@@ -1147,31 +1147,28 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	}
 	tree.Root = rootNode.JSONTypeToOriginalType()
 
-	// 3. 处理非 root 的每个 node
-	if jsonTree.ValueNode == nil || len(jsonTree.ValueNode) == 0 {
-		errMsg := "jsonTree.ValueNode 为空"
-		utils.LogError("[NodeToByteData] %s", errMsg)
-		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
-	}
 	resourceMap := make(map[int64][]byte, 0)
-	for _, node := range jsonTree.ValueNode {
-		if node == nil {
-			errMsg := "node 为空"
-			utils.LogError("[NodeToByteData] %s", errMsg)
-			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	// 3. 处理非 root 的每个 node
+	if jsonTree.ValueNode != nil && len(jsonTree.ValueNode) > 0 {
+		for _, node := range jsonTree.ValueNode {
+			if node == nil {
+				errMsg := "node 为空"
+				utils.LogError("[NodeToByteData] %s", errMsg)
+				return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+			}
+			err = node.GetValueAndKeyInfo(tableInfo)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo]错误: %s", err.Error()))
+				return nil, err
+			}
+			originalNode := node.JSONTypeToOriginalType()
+			byteData, err := originalNode.NodeToByteData(tree.TableInfo)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
+				return nil, err
+			}
+			resourceMap[originalNode.Offset] = byteData
 		}
-		err = node.GetValueAndKeyInfo(tableInfo)
-		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo]错误: %s", err.Error()))
-			return nil, err
-		}
-		originalNode := node.JSONTypeToOriginalType()
-		byteData, err := originalNode.NodeToByteData(tree.TableInfo)
-		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
-			return nil, err
-		}
-		resourceMap[originalNode.Offset] = byteData
 	}
 
 	// 4. json加载的表, 添加使用的内存数据引擎
