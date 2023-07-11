@@ -652,7 +652,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 		return err
 	}
 	waitWriterMap[curNode.Offset] = curNodeByte
-	utils.LogDebug(fmt.Sprintf("aaaaa1111001 %d", curNode.Offset))
 
 	// 3. 如果该叶子节点满了，进行分裂操作
 	for (!curNode.IsLeaf && len(curNode.KeysOffsetList) == tree.IndexOrder) || (curNode.IsLeaf && len(curNode.KeysValueList) == tree.LeafOrder) {
@@ -703,7 +702,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			return err
 		}
 		waitWriterMap[curNode.Offset] = curNodeByte
-		utils.LogDebug(fmt.Sprintf("aaaaa1111002 %d", curNode.Offset))
 
 		// 记录 newNode
 		newNodeByte, err := newNode.NodeToByteData(tree.TableInfo)
@@ -712,7 +710,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			return err
 		}
 		waitWriterMap[newNode.Offset] = newNodeByte
-		utils.LogDebug(fmt.Sprintf("aaaaa1111003 %d", newNode.Offset))
 
 		if lastCurNodeAfterNodeOffset != base.OffsetNull {
 			// curNode 的 afterNode 需要更新 BeforeNodeOffset
@@ -729,7 +726,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				return err
 			}
 			waitWriterMap[afterNode.Offset] = afterNodeByte
-			utils.LogDebug(fmt.Sprintf("aaaaa1111004 %d", afterNode.Offset))
 		}
 
 		// 3.2. 更新父节点的键列表和子节点列表
@@ -757,7 +753,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				return err
 			}
 			waitWriterMap[curNode.Offset] = curNodeByte
-			utils.LogDebug(fmt.Sprintf("aaaaa1111005 %d", curNode.Offset))
 			// newNode 需要更新 BeforeNodeOffset 记录
 			newNode.BeforeNodeOffset = nextEmptyOffset
 			newNodeByte, err := newNode.NodeToByteData(tree.TableInfo)
@@ -766,7 +761,6 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				return err
 			}
 			waitWriterMap[newNode.Offset] = newNodeByte
-			utils.LogDebug(fmt.Sprintf("aaaaa1111006 %d", newNode.Offset))
 
 			newRoot := &BPlusTreeNode{
 				IsLeaf:           false, // 需求分裂 root 的场景下，root 必然不是 leaf node
@@ -791,15 +785,21 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 				return err
 			}
 			waitWriterMap[newRoot.Offset] = newRootByte
-			utils.LogDebug(fmt.Sprintf("aaaaa1111007 %d", newRoot.Offset))
 
 		} else {
-			ppOffset := base.OffsetNull
+			var (
+				ppOffset = base.OffsetNull
+				ok       bool
+			)
 			if curNode.ParentOffset != base.RootOffsetValue {
-				ppOffset = parentOffsetMap[curNode.ParentOffset]
+				ppOffset, ok = parentOffsetMap[curNode.ParentOffset]
+				if ok != true {
+					errMsg := fmt.Sprintf("<%d>节点找不到父节点", curNode.ParentOffset)
+					utils.LogError(fmt.Sprintf("[BPlusTree.Insert] %s", errMsg))
+					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+				}
 			}
 			parentNode, err := tree.OffsetLoadNode(curNode.ParentOffset, ppOffset)
-			utils.LogDebug(fmt.Sprintf("asdasdadsdasd1111111 %d %v", curNode.ParentOffset, parentOffsetMap))
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] tree.OffsetLoadNode 错误: %s", err.Error()))
 				return err
@@ -844,20 +844,16 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			if parentNode.Offset == base.RootOffsetValue {
 				tree.Root = parentNode
 			}
-			utils.LogDebug(fmt.Sprintf("aaaaa1111008 %d", parentNode.Offset))
 
 			// 判断父结点是否需要处理
 			if (!parentNode.IsLeaf && len(parentNode.KeysOffsetList) == tree.IndexOrder) || (parentNode.IsLeaf && len(parentNode.KeysValueList) == tree.LeafOrder) {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("curNode %d => parentNode %d", curNode.Offset, parentNode.Offset))
 				curNode = parentNode
 			} else {
-				utils.LogDebug("break break break")
 				break
 			}
 		}
 	}
-
-	utils.LogDebug(fmt.Sprintf("asdsadasdasd %v", utils.ToJSON(waitWriterMap)))
 
 	// 4. 更新涉及到的 page 落盘
 	// FIXME 写不成功需要考虑整体回滚
