@@ -1681,17 +1681,19 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	if tree.Root.IsLeaf != true {
 		t.Errorf("Expected root is leaf, but got false")
 	}
-	rawJsonString := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"1\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}\n"
-	tree2, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	rawJsonString2 := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"1\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree2, err := LoadBPlusTreeFromJson([]byte(rawJsonString2))
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 	}
 	isSame, err = tree.CompareBPlusTreesSame(tree2)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
+		return
 	}
 	if !isSame {
 		t.Error("Expected false, but got true ")
+		return
 	}
 	utils.LogDebug("Insert 1 pass")
 
@@ -1703,6 +1705,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	err = tree.Insert(byteListKeyValue2, byteListDataValue2)
 	if err != nil {
 		t.Error("Expected error, but got nil")
+		return
+	}
+	rawJsonString3 := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree3, err := LoadBPlusTreeFromJson([]byte(rawJsonString3))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree3)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
 		return
 	}
 	utils.LogDebug("Insert 2 pass")

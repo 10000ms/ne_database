@@ -634,13 +634,15 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 	curNode.DataValues = append(curNode.DataValues, nil)
 	copy(curNode.KeysValueList[index+1:], curNode.KeysValueList[index:])
 	copy(curNode.DataValues[index+1:], curNode.DataValues[index:])
+	keyTrimFunc := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.TrimRaw
 	curNode.KeysValueList[index] = &ValueInfo{
-		Value: key,
+		Value: keyTrimFunc(key),
 	}
 	dataValue := make(map[string]*ValueInfo, 0)
 	for i, fieldInfo := range tree.TableInfo.ValueFieldInfo {
+		valueTrimFunc := tree.TableInfo.ValueFieldInfo[i].FieldType.TrimRaw
 		dataValue[fieldInfo.Name] = &ValueInfo{
-			Value: value[i],
+			Value: valueTrimFunc(value[i]),
 		}
 	}
 	curNode.DataValues[index] = dataValue
@@ -1389,45 +1391,49 @@ func (node *BPlusTreeNode) CompareBPlusTreeNodesSame(node2 *BPlusTreeNode) (bool
 	}
 
 	// KeysOffsetList
-	if node.KeysOffsetList == nil && node2.KeysOffsetList == nil {
-		// pass
-	} else if node.KeysOffsetList == nil || node2.KeysOffsetList == nil {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
-		return false, nil
-	} else if len(node.KeysOffsetList) != len(node2.KeysOffsetList) {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
-		return false, nil
-	} else if !list.Int64ListEqual(node.KeysOffsetList, node2.KeysOffsetList) {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
-		return false, nil
+	if !node.IsLeaf {
+		if node.KeysOffsetList == nil && node2.KeysOffsetList == nil {
+			// pass
+		} else if node.KeysOffsetList == nil || node2.KeysOffsetList == nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
+			return false, nil
+		} else if len(node.KeysOffsetList) != len(node2.KeysOffsetList) {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
+			return false, nil
+		} else if !list.Int64ListEqual(node.KeysOffsetList, node2.KeysOffsetList) {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 KeysOffsetList 不同")
+			return false, nil
+		}
 	}
 
 	// DataValues
-	if node.DataValues == nil && node2.DataValues == nil {
-		// pass
-	} else if node.DataValues == nil || node2.DataValues == nil {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodesSame] offset: %d 两节点 DataValues 不同, 其中一个DataValues为nil, node.DataValues is nil %v, node2.DataValues is nil %v", node.Offset, node.DataValues == nil, node2.DataValues == nil))
-		return false, nil
-	} else if len(node.DataValues) != len(node2.DataValues) {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 DataValues 不同, 长度不一致")
-		return false, nil
-	} else {
-		for i, v := range node.DataValues {
-			v2 := node2.DataValues[i]
-			if v == nil || v2 == nil || len(v) == 0 || len(v2) == 0 {
-				errMsg := fmt.Sprintf("node 的 DataValues 存在非法空值")
-				utils.LogError(fmt.Sprintf("[CompareBPlusTreeNodesSame] %s", errMsg))
-				return false, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerTypeError, fmt.Errorf(errMsg))
-			}
-			for key, value := range v {
-				if value2, ok := v2[key]; ok {
-					if !list.ByteListEqual(value.Value, value2.Value) {
-						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodes] 两节点 DataValues 不同, value.Value: %+v, value2.Value: %+v", value.Value, value2.Value))
+	if node.IsLeaf {
+		if node.DataValues == nil && node2.DataValues == nil {
+			// pass
+		} else if node.DataValues == nil || node2.DataValues == nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodesSame] offset: %d 两节点 DataValues 不同, 其中一个DataValues为nil, node.DataValues is nil %v, node2.DataValues is nil %v", node.Offset, node.DataValues == nil, node2.DataValues == nil))
+			return false, nil
+		} else if len(node.DataValues) != len(node2.DataValues) {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)("[CompareBPlusTreeNodesSame] 两节点 DataValues 不同, 长度不一致")
+			return false, nil
+		} else {
+			for i, v := range node.DataValues {
+				v2 := node2.DataValues[i]
+				if v == nil || v2 == nil || len(v) == 0 || len(v2) == 0 {
+					errMsg := fmt.Sprintf("node 的 DataValues 存在非法空值")
+					utils.LogError(fmt.Sprintf("[CompareBPlusTreeNodesSame] %s", errMsg))
+					return false, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerTypeError, fmt.Errorf(errMsg))
+				}
+				for key, value := range v {
+					if value2, ok := v2[key]; ok {
+						if !list.ByteListEqual(value.Value, value2.Value) {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodes] 两节点 DataValues 不同, value.Value: %+v, value2.Value: %+v", value.Value, value2.Value))
+							return false, nil
+						}
+					} else {
+						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodesSame] 两节点 DataValues 不同, value key: %s 在 node2 不存在", key))
 						return false, nil
 					}
-				} else {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 5)(fmt.Sprintf("[CompareBPlusTreeNodesSame] 两节点 DataValues 不同, value key: %s 在 node2 不存在", key))
-					return false, nil
 				}
 			}
 		}
