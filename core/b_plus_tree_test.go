@@ -1733,6 +1733,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		t.Error("Expected error, but got nil")
 		return
 	}
+	rawJsonString4 := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"1\",\"2\",\"3\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree4, err := LoadBPlusTreeFromJson([]byte(rawJsonString4))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree4)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 	utils.LogDebug("Insert 3 pass")
 
 	byteListDataValue4 := [][]byte{
@@ -1743,6 +1757,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	err = tree.Insert(byteListKeyValue4, byteListDataValue4)
 	if err != nil {
 		t.Error("Expected error, but got nil")
+		return
+	}
+	rawJsonString5 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"3\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":0,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree5, err := LoadBPlusTreeFromJson([]byte(rawJsonString5))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree5)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
 		return
 	}
 	utils.LogDebug("Insert 4 pass")
@@ -1757,6 +1785,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		t.Error("Expected error, but got nil")
 		return
 	}
+	rawJsonString6 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"3\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":0,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"3\",\"4\",\"5\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"},{\"age\":\"25\",\"name\":\"ac\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree6, err := LoadBPlusTreeFromJson([]byte(rawJsonString6))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree6)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 	utils.LogDebug("Insert 5 pass")
 
 	byteListDataValue6 := [][]byte{
@@ -1767,6 +1809,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	err = tree.Insert(byteListKeyValue6, byteListDataValue6)
 	if err != nil {
 		t.Error("Expected error, but got nil")
+		return
+	}
+	rawJsonString7 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"3\",\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":0,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":3000,\"parent_offset\":0,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"5\",\"6\"],\"data_values\":[{\"age\":\"25\",\"name\":\"ac\"},{\"age\":\"26\",\"name\":\"cc\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree7, err := LoadBPlusTreeFromJson([]byte(rawJsonString7))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree7)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
 		return
 	}
 	utils.LogDebug("Insert 6 pass")
@@ -1781,6 +1837,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		t.Error("Expected error, but got nil")
 		return
 	}
+	rawJsonString8 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"3\",\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":0,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":3000,\"parent_offset\":0,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"5\",\"6\",\"7\"],\"data_values\":[{\"age\":\"25\",\"name\":\"ac\"},{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"27\",\"name\":\"bc\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree8, err := LoadBPlusTreeFromJson([]byte(rawJsonString8))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree8)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 	utils.LogDebug("Insert 7 pass")
 
 	byteListDataValue8 := [][]byte{
@@ -1791,6 +1861,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	err = tree.Insert(byteListKeyValue8, byteListDataValue8)
 	if err != nil {
 		t.Error("Expected error, but got nil")
+		return
+	}
+	rawJsonString9 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"7\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":4000,\"parent_offset\":5000,\"keys_value\":[\"5\",\"6\"],\"data_values\":[{\"age\":\"25\",\"name\":\"ac\"},{\"age\":\"26\",\"name\":\"cc\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":3000,\"after_node_offset\":-1,\"parent_offset\":5000,\"keys_value\":[\"7\",\"8\"],\"data_values\":[{\"age\":\"27\",\"name\":\"bc\"},{\"age\":\"28\",\"name\":\"ca\"}]},{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"parent_offset\":0,\"keys_value\":[\"3\",\"5\"],\"data_values\":[]},{\"is_leaf\":false,\"keys_offset_list\":[3000,4000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"7\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":6000,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":3000,\"parent_offset\":6000,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree9, err := LoadBPlusTreeFromJson([]byte(rawJsonString9))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree9)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
 		return
 	}
 	utils.LogDebug("Insert 8 pass")
@@ -1805,6 +1889,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		t.Error("Expected error, but got nil")
 		return
 	}
+	rawJsonString10 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"7\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"parent_offset\":0,\"keys_value\":[\"3\",\"5\"],\"data_values\":[]},{\"is_leaf\":false,\"keys_offset_list\":[3000,4000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"7\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":6000,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":3000,\"parent_offset\":6000,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":4000,\"parent_offset\":5000,\"keys_value\":[\"5\",\"6\"],\"data_values\":[{\"age\":\"25\",\"name\":\"ac\"},{\"age\":\"26\",\"name\":\"cc\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":3000,\"after_node_offset\":-1,\"parent_offset\":5000,\"keys_value\":[\"7\",\"8\",\"9\"],\"data_values\":[{\"age\":\"27\",\"name\":\"bc\"},{\"age\":\"28\",\"name\":\"ca\"},{\"age\":\"29\",\"name\":\"cb\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree10, err := LoadBPlusTreeFromJson([]byte(rawJsonString10))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree10)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 	utils.LogDebug("Insert 9 pass")
 
 	byteListDataValue10 := [][]byte{
@@ -1815,6 +1913,20 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	err = tree.Insert(byteListKeyValue10, byteListDataValue10)
 	if err != nil {
 		t.Error("Expected error, but got nil")
+		return
+	}
+	rawJsonString11 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"parent_offset\":-1,\"keys_value\":[\"7\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":false,\"keys_offset_list\":[3000,4000,7000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"parent_offset\":0,\"keys_value\":[\"7\",\"9\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"parent_offset\":6000,\"keys_value\":[\"1\",\"2\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"aa\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":3000,\"parent_offset\":6000,\"keys_value\":[\"3\",\"4\"],\"data_values\":[{\"age\":\"23\",\"name\":\"ab\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":4000,\"parent_offset\":5000,\"keys_value\":[\"5\",\"6\"],\"data_values\":[{\"age\":\"25\",\"name\":\"ac\"},{\"age\":\"26\",\"name\":\"cc\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":3000,\"after_node_offset\":7000,\"parent_offset\":5000,\"keys_value\":[\"7\",\"8\"],\"data_values\":[{\"age\":\"27\",\"name\":\"bc\"},{\"age\":\"28\",\"name\":\"ca\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":7000,\"before_node_offset\":4000,\"after_node_offset\":-1,\"parent_offset\":5000,\"keys_value\":[\"9\",\"10\"],\"data_values\":[{\"age\":\"29\",\"name\":\"cb\"},{\"age\":\"30\",\"name\":\"ba\"}]},{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"parent_offset\":0,\"keys_value\":[\"3\",\"5\"],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree11, err := LoadBPlusTreeFromJson([]byte(rawJsonString11))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	isSame, err = tree.CompareBPlusTreesSame(tree11)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
 		return
 	}
 	utils.LogDebug("Insert 10 pass")
