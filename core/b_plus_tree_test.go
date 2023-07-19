@@ -1355,34 +1355,40 @@ func TestCompareBPlusTreeNodesSame(t *testing.T) {
 	}
 
 	node5 := BPlusTreeNode{
-		IsLeaf: true,
+		IsLeaf: false,
 		KeysValueList: []*ValueInfo{
 			{Value: []byte("hello")},
 			{Value: []byte("world")},
 		},
-		KeysOffsetList: []int64{100, 200, 301},
-		DataValues: []map[string]*ValueInfo{
-			{
-				"name": &ValueInfo{Value: []byte("Alice")},
-				"age":  &ValueInfo{Value: []byte("18")},
-			},
-			{
-				"name": &ValueInfo{Value: []byte("Bob")},
-				"age":  &ValueInfo{Value: []byte("22")},
-			},
-		},
+		KeysOffsetList:   []int64{100, 200, 301},
+		DataValues:       nil,
 		Offset:           123,
 		BeforeNodeOffset: 456,
 		AfterNodeOffset:  789,
 		ParentOffset:     0,
 	}
 
-	isEqual, err = node1.CompareBPlusTreeNodesSame(&node5)
+	node11 := BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("hello")},
+			{Value: []byte("world")},
+		},
+		KeysOffsetList:   []int64{100, 200, 300},
+		DataValues:       nil,
+		Offset:           123,
+		BeforeNodeOffset: 456,
+		AfterNodeOffset:  789,
+		ParentOffset:     0,
+	}
+
+	isEqual, err = node11.CompareBPlusTreeNodesSame(&node5)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 	}
 	if isEqual {
 		t.Error("Expected false, but got true ")
+		return
 	}
 
 	node6 := BPlusTreeNode{

@@ -881,19 +881,90 @@ func (tree *BPlusTree) Update(key int64, value interface{}) {
 }
 
 // Delete 删除键值对
-func (tree *BPlusTree) Delete(key int64) {
-	//// 1. 查找对应的叶子节点
-	//curNode := tree.Root
-	//for !curNode.IsLeaf {
-	//	index := 0
-	//	for ; index < len(curNode.Keys); index++ {
-	//		if curNode.Keys[index] > key {
-	//			break
-	//		}
-	//	}
-	//	curNode = curNode.Child[index]
-	//}
-	//
+func (tree *BPlusTree) Delete(key []byte) base.StandardError {
+	var (
+		curNode         = tree.Root             // 当前 node
+		parentOffsetMap = make(map[int64]int64) // 切换当前 node 的时候，需要记录父子关系
+		waitWriterMap   = make(map[int64][]byte)
+		err             base.StandardError
+	)
+
+	if key == nil || len(key) == 0 {
+		errMsg := fmt.Sprintf("key 数据为空")
+		utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+	}
+
+	// 1. 查找对应的叶子节点
+	for !curNode.IsLeaf {
+		index := 0
+		for ; index < len(curNode.KeysValueList); index++ {
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Greater 错误: %s", err.Error()))
+				return err
+			}
+			if greater {
+				break
+			}
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Equal 错误: %s", err.Error()))
+				return err
+			}
+			if equal {
+				break
+			}
+		}
+		nextOffset := curNode.KeysOffsetList[index]
+		parentOffsetMap[nextOffset] = curNode.Offset
+		curNode, err = tree.OffsetLoadNode(nextOffset, curNode.Offset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return err
+		}
+	}
+
+	// 2. 删除键值对
+	index := 0
+	for {
+		findIndex := len(curNode.KeysValueList)
+		for ; index < len(curNode.KeysValueList); index++ {
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Greater 错误: %s", err.Error()))
+				return err
+			}
+			if greater {
+				break
+			}
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Equal 错误: %s", err.Error()))
+				return err
+			}
+			if equal {
+				findIndex = index
+				break
+			}
+		}
+		if findIndex < len(curNode.KeysValueList) {
+			copy(curNode.KeysValueList[index:], curNode.KeysValueList[index+1:])
+			copy(curNode.DataValues[index:], curNode.DataValues[index+1:])
+			curNode.KeysValueList = curNode.KeysValueList[:len(curNode.KeysValueList)-1]
+			curNode.DataValues = curNode.DataValues[:len(curNode.DataValues)-1]
+
+			if findIndex > 0 {
+				index -= 1
+			}
+
+		} else {
+			break
+		}
+	}
+
+	return nil
+
 	//// 2. 删除键值对
 	//index := 0
 	//for ; index < len(curNode.Keys); index++ {
