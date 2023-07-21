@@ -931,6 +931,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.LeafDelete 错误: %s", err.Error()))
 		return err
 	}
+	// TODO: 考虑左右node相同的值也要删除
 	for remainItem == 0 && curNode.Offset != base.RootOffsetValue {
 		var (
 			ppOffset = base.OffsetNull
