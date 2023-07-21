@@ -926,148 +926,38 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 	}
 
 	// 2. 删除键值对
-	index := 0
-	for {
-		findIndex := len(curNode.KeysValueList)
-		for ; index < len(curNode.KeysValueList); index++ {
-			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
-			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Greater 错误: %s", err.Error()))
-				return err
-			}
-			if greater {
-				break
-			}
-			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
-			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Equal 错误: %s", err.Error()))
-				return err
-			}
-			if equal {
-				findIndex = index
-				break
+	remainItem, err := curNode.LeafDelete(key, tree.TableInfo)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.LeafDelete 错误: %s", err.Error()))
+		return err
+	}
+	for remainItem == 0 && curNode.Offset != base.RootOffsetValue {
+		var (
+			ppOffset = base.OffsetNull
+			ok       bool
+		)
+		if curNode.ParentOffset != base.RootOffsetValue {
+			ppOffset, ok = parentOffsetMap[curNode.ParentOffset]
+			if ok != true {
+				errMsg := fmt.Sprintf("<%d>节点找不到父节点", curNode.ParentOffset)
+				utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
 			}
 		}
-		if findIndex < len(curNode.KeysValueList) {
-			copy(curNode.KeysValueList[index:], curNode.KeysValueList[index+1:])
-			copy(curNode.DataValues[index:], curNode.DataValues[index+1:])
-			curNode.KeysValueList = curNode.KeysValueList[:len(curNode.KeysValueList)-1]
-			curNode.DataValues = curNode.DataValues[:len(curNode.DataValues)-1]
-
-			if findIndex > 0 {
-				index -= 1
-			}
-
-		} else {
-			break
+		needDeleteOffset := curNode.Offset
+		curNode, err := tree.OffsetLoadNode(curNode.ParentOffset, ppOffset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return err
+		}
+		remainItem, err = curNode.NoLeafDelete(needDeleteOffset, tree)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.NoLeafDelete 错误: %s", err.Error()))
+			return err
 		}
 	}
 
 	return nil
-
-	//// 2. 删除键值对
-	//index := 0
-	//for ; index < len(curNode.Keys); index++ {
-	//	if curNode.Keys[index] == key {
-	//		break
-	//	}
-	//}
-	//if index < len(curNode.Keys) {
-	//	copy(curNode.Keys[index:], curNode.Keys[index+1:])
-	//	copy(curNode.Values[index:], curNode.Values[index+1:])
-	//	curNode.Keys = curNode.Keys[:len(curNode.Keys)-1]
-	//	curNode.Values = curNode.Values[:len(curNode.Values)-1]
-	//}
-	//
-	//// 3. 如果该叶子节点数量小于阶数的一半，需要合并或者转移
-	//for len(curNode.Keys) < tree.Order/2 && curNode != tree.Root {
-	//	// 3.1. 找到兄弟节点
-	//	parent := curNode.Parent
-	//	index := 0
-	//	for ; index < len(parent.Child); index++ {
-	//		if parent.Child[index] == curNode {
-	//			break
-	//		}
-	//	}
-	//	var leftSibling, rightSibling *BPlusTreeNode
-	//	if index > 0 {
-	//		leftSibling = parent.Child[index-1]
-	//	}
-	//	if index < len(parent.Child)-1 {
-	//		rightSibling = parent.Child[index+1]
-	//	}
-	//
-	//	// 3.2. 尝试向左兄弟节点转移
-	//	if leftSibling != nil && len(leftSibling.Keys) > tree.Order/2 {
-	//		curNode.Keys = append([]int64{0}, curNode.Keys...)
-	//		curNode.Values = append([]interface{}{nil}, curNode.Values...)
-	//		copy(curNode.Keys[0:], leftSibling.Keys[len(leftSibling.Keys)-1:])
-	//		copy(curNode.Values[0:], leftSibling.Values[len(leftSibling.Values)-1:])
-	//		leftSibling.Keys = leftSibling.Keys[:len(leftSibling.Keys)-1]
-	//		leftSibling.Values = leftSibling.Values[:len(leftSibling.Values)-1]
-	//		if !curNode.IsLeaf {
-	//			curNode.Child = append([]*BPlusTreeNode{nil}, curNode.Child...)
-	//			copy(curNode.Child[0:], leftSibling.Child[len(leftSibling.Child)-1:])
-	//			leftSibling.Child[len(leftSibling.Child)-1].Parent = curNode
-	//			leftSibling.Child = leftSibling.Child[:len(leftSibling.Child)-1]
-	//		}
-	//		parent.Keys[index-1] = curNode.Keys[0]
-	//		break
-	//	}
-	//
-	//	// 3.3. 尝试向右兄弟节点转移
-	//	if rightSibling != nil && len(rightSibling.Keys) > tree.Order/2 {
-	//		curNode.Keys = append(curNode.Keys, 0)
-	//		curNode.Values = append(curNode.Values, nil)
-	//		copy(curNode.Keys[len(curNode.Keys)-1:], rightSibling.Keys[:1])
-	//		copy(curNode.Values[len(curNode.Values)-1:], rightSibling.Values[:1])
-	//		rightSibling.Keys = rightSibling.Keys[1:]
-	//		rightSibling.Values = rightSibling.Values[1:]
-	//		if !curNode.IsLeaf {
-	//			curNode.Child = append(curNode.Child, nil)
-	//			copy(curNode.Child[len(curNode.Child)-1:], rightSibling.Child[:1])
-	//			rightSibling.Child[0].Parent = curNode
-	//			rightSibling.Child = rightSibling.Child[1:]
-	//		}
-	//		parent.Keys[index] = rightSibling.Keys[0]
-	//		break
-	//	}
-	//
-	//	// 3.4. 向左兄弟节点合并
-	//	if leftSibling != nil {
-	//		leftSibling.Keys = append(leftSibling.Keys, parent.Keys[index-1])
-	//		leftSibling.Values = append(leftSibling.Values, nil)
-	//		leftSibling.Keys = append(leftSibling.Keys, curNode.Keys...)
-	//		leftSibling.Values = append(leftSibling.Values, curNode.Values...)
-	//		if !curNode.IsLeaf {
-	//			leftSibling.Child = append(leftSibling.Child, curNode.Child...)
-	//			for _, child := range curNode.Child {
-	//				child.Parent = leftSibling
-	//			}
-	//		}
-	//		parent.Keys = append(parent.Keys[:index-1], parent.Keys[index:]...)
-	//		parent.Child = append(parent.Child[:index], parent.Child[index+1:]...)
-	//		curNode = parent
-	//	} else { // 3.5. 向右兄弟节点合并
-	//		curNode.Keys = append(curNode.Keys, parent.Keys[index])
-	//		curNode.Values = append(curNode.Values, nil)
-	//		curNode.Keys = append(curNode.Keys, rightSibling.Keys...)
-	//		curNode.Values = append(curNode.Values, rightSibling.Values...)
-	//		if !curNode.IsLeaf {
-	//			curNode.Child = append(curNode.Child, rightSibling.Child...)
-	//			for _, child := range rightSibling.Child {
-	//				child.Parent = curNode
-	//			}
-	//		}
-	//		parent.Keys = append(parent.Keys[:index], parent.Keys[index+1:]...)
-	//		parent.Child = append(parent.Child[:index+1], parent.Child[index+2:]...)
-	//		curNode = parent
-	//	}
-	//}
-	//if len(tree.Root.Keys) == 0 {
-	//	tree.Root = tree.Root.Child[0]
-	//	tree.Root.Parent = nil
-	//}
 }
 
 // Search 查找键对应的值
@@ -1089,6 +979,98 @@ func (tree *BPlusTree) Search(key int64) interface{} {
 	//	curNode = curNode.Child[index]
 	//}
 	return nil
+}
+
+func (node *BPlusTreeNode) LeafDelete(key []byte, tableInfo *tableSchema.TableMetaInfo) (int, base.StandardError) {
+	if !node.IsLeaf {
+		errMsg := fmt.Sprintf("非leaf结点使用leaf删除")
+		utils.LogError(fmt.Sprintf("[BPlusTreeNode.LeafDelete] %s", errMsg))
+		return 0, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerTypeError, fmt.Errorf(errMsg))
+	}
+	index := 0
+	for {
+		findIndex := len(node.KeysValueList)
+		for ; index < len(node.KeysValueList); index++ {
+			greater, err := tableInfo.PrimaryKeyFieldInfo.FieldType.Greater(node.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.Delete] Greater 错误: %s", err.Error()))
+				return 0, err
+			}
+			if greater {
+				break
+			}
+			equal, err := tableInfo.PrimaryKeyFieldInfo.FieldType.Equal(node.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.Delete] Equal 错误: %s", err.Error()))
+				return 0, err
+			}
+			if equal {
+				findIndex = index
+				break
+			}
+		}
+		if findIndex < len(node.KeysValueList) {
+			copy(node.KeysValueList[findIndex:], node.KeysValueList[findIndex+1:])
+			copy(node.DataValues[findIndex:], node.DataValues[findIndex+1:])
+			node.KeysValueList = node.KeysValueList[:len(node.KeysValueList)-1]
+			node.DataValues = node.DataValues[:len(node.DataValues)-1]
+		} else {
+			break
+		}
+	}
+	return len(node.KeysValueList), nil
+}
+
+func (node *BPlusTreeNode) NoLeafDelete(offset int64, tree *BPlusTree) (int, base.StandardError) {
+	if node.IsLeaf {
+		errMsg := fmt.Sprintf("leaf结点使用非leaf删除")
+		utils.LogError(fmt.Sprintf("[BPlusTreeNode.NoLeafDelete] %s", errMsg))
+		return 0, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerTypeError, fmt.Errorf(errMsg))
+	}
+	if offset == base.OffsetNull {
+		errMsg := fmt.Sprintf("删除空offset")
+		utils.LogError(fmt.Sprintf("[BPlusTreeNode.NoLeafDelete] %s", errMsg))
+		return 0, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
+	}
+	deleteFunc := func(i int) {
+		copy(node.KeysValueList[i:], node.KeysValueList[i+1:])
+		copy(node.KeysOffsetList[i:], node.KeysOffsetList[i+1:])
+		node.KeysValueList = node.KeysValueList[:len(node.KeysValueList)-1]
+		node.KeysOffsetList = node.KeysOffsetList[:len(node.KeysOffsetList)-1]
+	}
+	index := 0
+	for ; index < len(node.KeysOffsetList); index++ {
+		if offset == node.KeysOffsetList[index] {
+			break
+		}
+	}
+	if index < len(node.KeysOffsetList) {
+		if index == 0 || index == len(node.KeysOffsetList)-1 {
+			if index == 0 && len(node.KeysValueList) > 1 {
+				deleteFunc(index)
+			} else if len(node.KeysValueList) == 1 {
+				// 只剩一个key，并且两个offset对应的node都是空的时候，需要删除本node
+				firstChildNode, err := tree.OffsetLoadNode(node.KeysOffsetList[0], node.Offset)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.NoLeafDelete] tree.OffsetLoadNode 错误: %s", err.Error()))
+					return 0, err
+				}
+				lastChildNode, err := tree.OffsetLoadNode(node.KeysOffsetList[1], node.Offset)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTreeNode.NoLeafDelete] tree.OffsetLoadNode 错误: %s", err.Error()))
+					return 0, err
+				}
+				if len(firstChildNode.KeysValueList) == 0 && len(lastChildNode.KeysValueList) == 0 {
+					node.KeysValueList = node.KeysValueList[:0]
+					node.KeysOffsetList = node.KeysOffsetList[:0]
+					return 0, nil
+				}
+			}
+		} else {
+			deleteFunc(index)
+		}
+	}
+	return len(node.KeysValueList) + 1, nil
 }
 
 func (node *BPlusTreeNode) SprintBPlusTreeNode(tree *BPlusTree) (string, base.StandardError) {
