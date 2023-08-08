@@ -268,6 +268,11 @@ func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.Standa
 		utils.LogError("[BPlusTreeNode OffsetToNode Reader] 读取数据错误 " + er.Error())
 		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
 	}
+	if nodeData == nil || len(nodeData) == 0 {
+		errMsg := fmt.Sprintf("offset<%d>读取不到数据", offset)
+		utils.LogError("[BPlusTree OffsetLoadNode] " + errMsg)
+		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
+	}
 	node := &BPlusTreeNode{}
 	err := node.LoadByteData(offset, tree.TableInfo, nodeData)
 	if err != nil {
@@ -1069,6 +1074,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 			pOffset = pInfo.OnlyParent
 		} else {
 			pOffset = pInfo.RightParent
+			// FIXME: LeftParent 应该也要处理才对
 		}
 
 		dNode, err := tree.OffsetLoadNode(pOffset)
@@ -1311,7 +1317,7 @@ func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, 
 	hasFirstAndLastDelete := false
 	deleteFunc := func(i int) {
 		copy(node.KeysValueList[i:], node.KeysValueList[i+1:])
-		copy(node.KeysOffsetList[i+1:], node.KeysOffsetList[i+2:])
+		copy(node.KeysOffsetList[i:], node.KeysOffsetList[i+1:])
 		node.KeysValueList = node.KeysValueList[:len(node.KeysValueList)-1]
 		node.KeysOffsetList = node.KeysOffsetList[:len(node.KeysOffsetList)-1]
 	}
@@ -1322,8 +1328,8 @@ func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, 
 	}
 	if index < len(node.KeysOffsetList) {
 		if index == 0 || index == len(node.KeysOffsetList)-1 {
-			hasFirstAndLastDelete = true
-			if index == 0 && len(node.KeysValueList) > 1 {
+			if (index == 0 || index == len(node.KeysOffsetList)-1) && len(node.KeysValueList) > 1 {
+				hasFirstAndLastDelete = true
 				deleteFunc(index)
 			} else if len(node.KeysValueList) == 1 {
 				// 只剩一个key，并且两个offset对应的node都是空的时候，需要删除本node
@@ -1338,9 +1344,10 @@ func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, 
 					return 0, false, err
 				}
 				if len(firstChildNode.KeysValueList) == 0 && len(lastChildNode.KeysValueList) == 0 {
+					hasFirstAndLastDelete = true
 					node.KeysValueList = node.KeysValueList[:0]
 					node.KeysOffsetList = node.KeysOffsetList[:0]
-					return 0, false, nil
+					return 0, hasFirstAndLastDelete, nil
 				}
 			}
 		} else {

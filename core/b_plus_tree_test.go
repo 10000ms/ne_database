@@ -2309,3 +2309,135 @@ func TestBPlusTree_NodeParentMap(t *testing.T) {
 	}
 	utils.LogDebug(utils.ToJSON(m))
 }
+
+func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	rawJsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"keys_value\":[],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":2000,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err := tree.Root.IndexNodeDelete(2000, tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 0 {
+		t.Error("Expected 0")
+		return
+	}
+	if hasFirstAndLastDelete != true {
+		t.Error("Expected true")
+		return
+	}
+
+	rawJsonString2 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":3000,\"keys_value\":[],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":2000,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree2, err := LoadBPlusTreeFromJson([]byte(rawJsonString2))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err = tree2.Root.IndexNodeDelete(1000, tree2)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 2 {
+		t.Error("Expected 2")
+		return
+	}
+	if hasFirstAndLastDelete != false {
+		t.Error("Expected false")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err = tree2.Root.IndexNodeDelete(3000, tree2)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 0 {
+		t.Error("Expected 0")
+		return
+	}
+	if hasFirstAndLastDelete != true {
+		t.Error("Expected true")
+		return
+	}
+
+	rawJsonString3 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":3000,\"keys_value\":[],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":2000,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree3, err := LoadBPlusTreeFromJson([]byte(rawJsonString3))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err = tree3.Root.IndexNodeDelete(1000, tree3)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 2 {
+		t.Error("Expected 2")
+		return
+	}
+	if hasFirstAndLastDelete != false {
+		t.Error("Expected false")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err = tree3.Root.IndexNodeDelete(2000, tree3)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 0 {
+		t.Error("Expected 0")
+		return
+	}
+	if hasFirstAndLastDelete != true {
+		t.Error("Expected true")
+		return
+	}
+
+	rawJsonString4 := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[2000,1000,3000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":-1,\"after_node_offset\":3000,\"keys_value\":[],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree4, err := LoadBPlusTreeFromJson([]byte(rawJsonString4))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, hasFirstAndLastDelete, err = tree4.Root.IndexNodeDelete(2000, tree4)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
+	// TODO
+
+	jsonString, err := tree3.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	utils.LogDebug(jsonString)
+
+	if remainItem != 2 {
+		t.Error("Expected 2")
+		return
+	}
+	if hasFirstAndLastDelete != true {
+		t.Error("Expected false")
+		return
+	}
+}
+
+func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
+	// TODO
+}
+
+func TestBPlusTree_Delete(t *testing.T) {
+	// TODO
+}
