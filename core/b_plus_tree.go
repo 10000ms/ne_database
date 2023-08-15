@@ -1058,132 +1058,62 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 		checkDeleteLeafNodeOffsetToParent = checkDeleteLeafNodeOffsetToParent[1:]
 
 		var (
-			pInfo   *ParentInfo
-			pOffset int64
-			ok      bool
+			pInfo *ParentInfo
+			ok    bool
 		)
 
 		pInfo, ok = parentOffsetMap[childNodeOffset]
 		if !ok || pInfo == nil {
-			errMsg := fmt.Sprintf("offset<%d> 找不到父offset", pOffset)
+			errMsg := fmt.Sprintf("offset<%d> 找不到父offset", childNodeOffset)
 			utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
 			return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 		}
 
+		parentOffsetList := make([]int64, 0)
+
 		if pInfo.OnlyParent != base.OffsetNull {
-			pOffset = pInfo.OnlyParent
+			parentOffsetList = append(parentOffsetList, pInfo.OnlyParent)
 		} else {
-			pOffset = pInfo.RightParent
-			// FIXME: LeftParent 应该也要处理才对
+
+			parentOffsetList = append(parentOffsetList, pInfo.LeftParent)
+			parentOffsetList = append(parentOffsetList, pInfo.RightParent)
 		}
 
-		dNode, err := tree.OffsetLoadNode(pOffset)
-		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
-			return err
-		}
-		remainItem, hasFirstAndLastDelete, err := dNode.IndexNodeDelete(childNodeOffset, tree)
-		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.IndexNodeDelete 错误: %s", err.Error()))
-			return err
-		}
-		if remainItem == 0 && dNode.Offset != base.RootOffsetValue {
-			checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, dNode.Offset)
-			success, err := tree.ResourceManager.Delete(dNode.Offset)
+		for len(parentOffsetList) > 0 {
+			pOffset := parentOffsetList[0]
+			parentOffsetList = parentOffsetList[1:]
+
+			dNode, err := tree.OffsetLoadNode(pOffset)
 			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Delete 错误: %s", err.Error()))
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
 				return err
 			}
-			if !success {
-				errMsg := fmt.Sprintf("删除offset <%d>失败", dNode.Offset)
-				utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
-				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+			remainItem, hasFirstAndLastDelete, err := dNode.IndexNodeDelete(childNodeOffset, tree)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.IndexNodeDelete 错误: %s", err.Error()))
+				return err
 			}
-			// 左右结点的连接信息也需要处理
-			if dNode.BeforeNodeOffset != base.OffsetNull {
-				beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
+			if remainItem == 0 && dNode.Offset != base.RootOffsetValue {
+				checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, dNode.Offset)
+				success, err := tree.ResourceManager.Delete(dNode.Offset)
 				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
-					return err
-				}
-				beforeNode.AfterNodeOffset = dNode.AfterNodeOffset
-				checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1])
-				beforeNodeByte, err := beforeNode.NodeToByteData(tree.TableInfo)
-				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
-					return err
-				}
-				success, err := tree.ResourceManager.Writer(beforeNode.Offset, beforeNodeByte)
-				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Delete 错误: %s", err.Error()))
 					return err
 				}
 				if !success {
-					errMsg := fmt.Sprintf("写入offset <%d>失败", beforeNode.Offset)
+					errMsg := fmt.Sprintf("删除offset <%d>失败", dNode.Offset)
 					utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
 					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
 				}
-			}
-			if dNode.AfterNodeOffset != base.OffsetNull {
-				afterNode, err := tree.OffsetLoadNode(dNode.AfterNodeOffset)
-				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
-					return err
-				}
-				afterNode.AfterNodeOffset = dNode.AfterNodeOffset
-				if dNode.BeforeNodeOffset == base.OffsetNull {
-					// 空的话，要拿到前面的 key offset
-					checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, afterNode.KeysOffsetList[0])
-				} else {
-					// 要指向beforeNode的-1个KeysOffsetList
-					beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
-					if err != nil {
-						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
-						return err
-					}
-					afterNode.KeysOffsetList[0] = beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1]
-				}
-				afterNodeByte, err := afterNode.NodeToByteData(tree.TableInfo)
-				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
-					return err
-				}
-				success, err := tree.ResourceManager.Writer(afterNode.Offset, afterNodeByte)
-				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
-					return err
-				}
-				if !success {
-					errMsg := fmt.Sprintf("写入offset <%d>失败", afterNode.Offset)
-					utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
-					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
-				}
-			}
-		} else {
-			dNodeByte, err := dNode.NodeToByteData(tree.TableInfo)
-			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
-				return err
-			}
-			success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
-			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
-				return err
-			}
-			if !success {
-				errMsg := fmt.Sprintf("写入offset <%d>失败", dNode.Offset)
-				utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
-				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
-			}
-			if hasFirstAndLastDelete {
-				// 如果首尾删除，需要处理相邻两个结点
+				// 左右结点的连接信息也需要处理
 				if dNode.BeforeNodeOffset != base.OffsetNull {
 					beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
 						return err
 					}
-					beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1] = dNode.KeysOffsetList[0]
+					beforeNode.AfterNodeOffset = dNode.AfterNodeOffset
+					checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1])
 					beforeNodeByte, err := beforeNode.NodeToByteData(tree.TableInfo)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
@@ -1206,7 +1136,19 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
 						return err
 					}
-					afterNode.KeysOffsetList[0] = dNode.KeysOffsetList[len(dNode.KeysOffsetList)-1]
+					afterNode.AfterNodeOffset = dNode.AfterNodeOffset
+					if dNode.BeforeNodeOffset == base.OffsetNull {
+						// 空的话，要拿到前面的 key offset
+						checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, afterNode.KeysOffsetList[0])
+					} else {
+						// 要指向beforeNode的-1个KeysOffsetList
+						beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
+							return err
+						}
+						afterNode.KeysOffsetList[0] = beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1]
+					}
 					afterNodeByte, err := afterNode.NodeToByteData(tree.TableInfo)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
@@ -1223,8 +1165,74 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
 					}
 				}
+			} else {
+				dNodeByte, err := dNode.NodeToByteData(tree.TableInfo)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
+					return err
+				}
+				success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+					return err
+				}
+				if !success {
+					errMsg := fmt.Sprintf("写入offset <%d>失败", dNode.Offset)
+					utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+				}
+				if hasFirstAndLastDelete {
+					// 如果首尾删除，需要处理相邻两个结点
+					if dNode.BeforeNodeOffset != base.OffsetNull {
+						beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
+							return err
+						}
+						beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1] = dNode.KeysOffsetList[0]
+						beforeNodeByte, err := beforeNode.NodeToByteData(tree.TableInfo)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
+							return err
+						}
+						success, err := tree.ResourceManager.Writer(beforeNode.Offset, beforeNodeByte)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+							return err
+						}
+						if !success {
+							errMsg := fmt.Sprintf("写入offset <%d>失败", beforeNode.Offset)
+							utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+							return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+						}
+					}
+					if dNode.AfterNodeOffset != base.OffsetNull {
+						afterNode, err := tree.OffsetLoadNode(dNode.AfterNodeOffset)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
+							return err
+						}
+						afterNode.KeysOffsetList[0] = dNode.KeysOffsetList[len(dNode.KeysOffsetList)-1]
+						afterNodeByte, err := afterNode.NodeToByteData(tree.TableInfo)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
+							return err
+						}
+						success, err := tree.ResourceManager.Writer(afterNode.Offset, afterNodeByte)
+						if err != nil {
+							utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+							return err
+						}
+						if !success {
+							errMsg := fmt.Sprintf("写入offset <%d>失败", afterNode.Offset)
+							utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+							return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+						}
+					}
+				}
 			}
 		}
+
 	}
 
 	return nil
