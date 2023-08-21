@@ -2477,13 +2477,62 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	rawJsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"int64\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	rawJsonString := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":[],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
 	tree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstAndLastDelete, err := tree.Root.LeafNodeDelete(2000, tree)
+	keyValueByte, err := base.Int64ToByteList(2000)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, leftCheck, rightCheck, err := tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 3 {
+		t.Error("Expected 3")
+		return
+	}
+	if leftCheck != false {
+		t.Error("Expected false")
+		return
+	}
+	if rightCheck != false {
+		t.Error("Expected false")
+		return
+	}
+	keyValueByte, err = base.StringToByteList("4")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 2 {
+		t.Error("Expected 2")
+		return
+	}
+	if leftCheck != true {
+		t.Error("Expected true")
+		return
+	}
+	if rightCheck != false {
+		t.Error("Expected false")
+		return
+	}
+	keyValueByte, err = base.StringToByteList("5")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2492,12 +2541,192 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected 0")
 		return
 	}
-	if hasFirstAndLastDelete != true {
+	if leftCheck != true {
+		t.Error("Expected true")
+		return
+	}
+	if rightCheck != true {
+		t.Error("Expected true")
+		return
+	}
+
+	rawJsonString2 := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":[],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree2, err := LoadBPlusTreeFromJson([]byte(rawJsonString2))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	keyValueByte, err = base.StringToByteList("5")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeDelete(keyValueByte, tree2.TableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 1 {
+		t.Error("Expected 1")
+		return
+	}
+	if leftCheck != false {
+		t.Error("Expected false")
+		return
+	}
+	if rightCheck != true {
+		t.Error("Expected true")
+		return
+	}
+	keyValueByte, err = base.StringToByteList("4")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeDelete(keyValueByte, tree2.TableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if remainItem != 0 {
+		t.Error("Expected 1")
+		return
+	}
+	if leftCheck != true {
+		t.Error("Expected true")
+		return
+	}
+	if rightCheck != true {
 		t.Error("Expected true")
 		return
 	}
 }
 
-func TestBPlusTree_Delete(t *testing.T) {
+func TestBPlusTree_Delete_1(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	var jsonString string
+
+	rawJsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":false,\"keys_offset_list\":[2000,3000,1000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"keys_value\":[\"3\",\"4\"],\"data_values\":[]},{\"is_leaf\":false,\"keys_offset_list\":[1000,4000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":3000,\"keys_value\":[\"3\",\"3\"],\"data_values\":[{\"age\":\"27\",\"name\":\"bc\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":2000,\"after_node_offset\":1000,\"keys_value\":[\"3\",\"4\",\"4\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"28\",\"name\":\"ca\"},{\"age\":\"25\",\"name\":\"ac\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":3000,\"after_node_offset\":4000,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"30\",\"name\":\"ba\"},{\"age\":\"29\",\"name\":\"cb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"keys_value\":[\"5\",\"5\"],\"data_values\":[{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	keyValueByte, err := base.Int64ToByteList(2000)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	err = tree.Delete(keyValueByte)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
+	testTree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	isSame, err := testTree.CompareBPlusTreesSame(tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
+
+	jsonString, err = tree.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+	utils.LogDebug(jsonString)
+
+	utils.LogDebug("Delete_1 test pass")
+
+}
+
+func TestBPlusTree_Delete_2(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	var jsonString string
+
+	rawJsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":false,\"keys_offset_list\":[2000,3000,1000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"keys_value\":[\"3\",\"4\"],\"data_values\":[]},{\"is_leaf\":false,\"keys_offset_list\":[1000,4000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":2000,\"before_node_offset\":-1,\"after_node_offset\":3000,\"keys_value\":[\"3\",\"3\"],\"data_values\":[{\"age\":\"27\",\"name\":\"bc\"},{\"age\":\"24\",\"name\":\"bb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":2000,\"after_node_offset\":1000,\"keys_value\":[\"3\",\"4\",\"4\"],\"data_values\":[{\"age\":\"20\",\"name\":\"Alice\"},{\"age\":\"28\",\"name\":\"ca\"},{\"age\":\"25\",\"name\":\"ac\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":3000,\"after_node_offset\":4000,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"30\",\"name\":\"ba\"},{\"age\":\"29\",\"name\":\"cb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"keys_value\":[\"5\",\"5\"],\"data_values\":[{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	keyValueByte, err := base.StringToByteList("3")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	err = tree.Delete(keyValueByte)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
+	testJsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[6000,5000],\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},\"value_node\":[{\"is_leaf\":false,\"keys_offset_list\":[1000,4000],\"offset\":5000,\"before_node_offset\":6000,\"after_node_offset\":-1,\"keys_value\":[\"5\"],\"data_values\":[]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":3000,\"before_node_offset\":-1,\"after_node_offset\":1000,\"keys_value\":[\"4\",\"4\"],\"data_values\":[{\"age\":\"28\",\"name\":\"ca\"},{\"age\":\"25\",\"name\":\"ac\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":3000,\"after_node_offset\":4000,\"keys_value\":[\"4\",\"5\",\"5\"],\"data_values\":[{\"age\":\"22\",\"name\":\"aa\"},{\"age\":\"30\",\"name\":\"ba\"},{\"age\":\"29\",\"name\":\"cb\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":4000,\"before_node_offset\":1000,\"after_node_offset\":-1,\"keys_value\":[\"5\",\"5\"],\"data_values\":[{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},{\"is_leaf\":false,\"keys_offset_list\":[3000,1000],\"offset\":6000,\"before_node_offset\":-1,\"after_node_offset\":5000,\"keys_value\":[\"4\"],\"data_values\":[]}],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	testTree, err := LoadBPlusTreeFromJson([]byte(testJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	isSame, err := testTree.CompareBPlusTreesSame(tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
+
+	keyValueByte, err = base.StringToByteList("4")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	err = tree.Delete(keyValueByte)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
 	// TODO
+
+	jsonString, err = tree.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+	utils.LogDebug(jsonString)
+
+	keyValueByte, err = base.StringToByteList("5")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	err = tree.Delete(keyValueByte)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
+	utils.LogDebug("Delete_2 test pass")
+
 }
