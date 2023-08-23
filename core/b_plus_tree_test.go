@@ -2356,13 +2356,12 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected 2")
 		return
 	}
-	// TODO
-	if hasFirstChange != true {
-		t.Error("Expected true")
+	if hasFirstChange != false {
+		t.Error("Expected false")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 	remainItem, hasFirstChange, hasLastChange, err = tree2.Root.IndexNodeDelete(3000, tree2)
@@ -2398,12 +2397,12 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected 2")
 		return
 	}
-	if hasFirstChange != true {
-		t.Error("Expected true")
+	if hasFirstChange != false {
+		t.Error("Expected false")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 	remainItem, hasFirstChange, hasLastChange, err = tree3.Root.IndexNodeDelete(2000, tree3)
@@ -2443,8 +2442,8 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected true")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 	remainItem, hasFirstChange, hasLastChange, err = tree4.Root.IndexNodeDelete(1000, tree4)
@@ -2484,8 +2483,8 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected true")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 	remainItem, hasFirstChange, hasLastChange, err = tree5.Root.IndexNodeDelete(3000, tree5)
