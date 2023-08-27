@@ -2310,7 +2310,7 @@ func TestBPlusTree_NodeParentMap(t *testing.T) {
 	utils.LogDebug(utils.ToJSON(m))
 }
 
-func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
+func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
@@ -2323,7 +2323,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err := tree.Root.IndexNodeDelete(2000, tree)
+	remainItem, hasFirstChange, hasLastChange, err := tree.Root.IndexNodeClear(2000, tree)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2347,7 +2347,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree2.Root.IndexNodeDelete(1000, tree2)
+	remainItem, hasFirstChange, hasLastChange, err = tree2.Root.IndexNodeClear(1000, tree2)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2364,7 +2364,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected false")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree2.Root.IndexNodeDelete(3000, tree2)
+	remainItem, hasFirstChange, hasLastChange, err = tree2.Root.IndexNodeClear(3000, tree2)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2388,7 +2388,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree3.Root.IndexNodeDelete(1000, tree3)
+	remainItem, hasFirstChange, hasLastChange, err = tree3.Root.IndexNodeClear(1000, tree3)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2405,7 +2405,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected false")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree3.Root.IndexNodeDelete(2000, tree3)
+	remainItem, hasFirstChange, hasLastChange, err = tree3.Root.IndexNodeClear(2000, tree3)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2429,7 +2429,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree4.Root.IndexNodeDelete(2000, tree4)
+	remainItem, hasFirstChange, hasLastChange, err = tree4.Root.IndexNodeClear(2000, tree4)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2446,7 +2446,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected false")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree4.Root.IndexNodeDelete(1000, tree4)
+	remainItem, hasFirstChange, hasLastChange, err = tree4.Root.IndexNodeClear(1000, tree4)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2470,7 +2470,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree5.Root.IndexNodeDelete(2000, tree5)
+	remainItem, hasFirstChange, hasLastChange, err = tree5.Root.IndexNodeClear(2000, tree5)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2487,7 +2487,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 		t.Error("Expected false")
 		return
 	}
-	remainItem, hasFirstChange, hasLastChange, err = tree5.Root.IndexNodeDelete(3000, tree5)
+	remainItem, hasFirstChange, hasLastChange, err = tree5.Root.IndexNodeClear(3000, tree5)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2506,7 +2506,7 @@ func TestBPlusTreeNode_IndexNodeDelete(t *testing.T) {
 	}
 }
 
-func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
+func TestBPlusTreeNode_LeafNodeClear(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
 	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
@@ -2524,7 +2524,7 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, leftCheck, rightCheck, err := tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
+	remainItem, leftCheck, rightCheck, err := tree.Root.LeafNodeClear(keyValueByte, tree.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2546,7 +2546,7 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
+	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeClear(keyValueByte, tree.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2568,7 +2568,7 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeDelete(keyValueByte, tree.TableInfo)
+	remainItem, leftCheck, rightCheck, err = tree.Root.LeafNodeClear(keyValueByte, tree.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2597,7 +2597,7 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeDelete(keyValueByte, tree2.TableInfo)
+	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeClear(keyValueByte, tree2.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2619,7 +2619,7 @@ func TestBPlusTreeNode_LeafNodeDelete(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeDelete(keyValueByte, tree2.TableInfo)
+	remainItem, leftCheck, rightCheck, err = tree2.Root.LeafNodeClear(keyValueByte, tree2.TableInfo)
 	if err != nil {
 		t.Error("Expected nil error, but got error")
 		return
@@ -2743,15 +2743,6 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 		return
 	}
 
-	// TODO
-
-	jsonString, err = tree.BPlusTreeToJson()
-	if err != nil {
-		t.Error("Expected error, but got nil")
-		return
-	}
-	utils.LogDebug(jsonString)
-
 	keyValueByte, err = base.StringToByteList("5")
 	if err != nil {
 		t.Error("Expected nil error, but got error")
@@ -2762,6 +2753,15 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
+
+	// TODO
+
+	jsonString, err = tree.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+	utils.LogDebug(jsonString)
 
 	utils.LogDebug("Delete_2 test pass")
 

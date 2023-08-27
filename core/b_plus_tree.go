@@ -416,7 +416,7 @@ func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) 
 
 	// 3. 取总共长度，以pk长度为准（非叶子结点需要+1）
 	l := int64(len(node.KeysValueList))
-	if !node.IsLeaf {
+	if !node.IsLeaf && len(node.KeysValueList) > 0 {
 		l += 1
 	}
 	nodeValueLengthByte, err := base.Int64ToByteList(l)
@@ -428,8 +428,8 @@ func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) 
 
 	// 4. 取内容数据
 	if !node.IsLeaf {
-		if len(node.KeysOffsetList)-1 != len(node.KeysValueList) {
-			errMsg := "非法非叶子结点，长度不对"
+		if len(node.KeysOffsetList)-1 != len(node.KeysValueList) && (len(node.KeysOffsetList) != 0 && len(node.KeysValueList) != 0) {
+			errMsg := fmt.Sprintf("offset<%d>非法非叶子结点，长度不对", node.Offset)
 			utils.LogError("[NodeToByteData] " + errMsg)
 			return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 		}
@@ -449,12 +449,14 @@ func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) 
 			}
 			d = append(d, keyValueByte...)
 		}
-		lastOffsetByte, err := base.Int64ToByteList(node.KeysOffsetList[len(node.KeysOffsetList)-1])
-		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] 取lastOffsetByte出错"))
-			return nil, err
+		if len(node.KeysValueList) > 0 {
+			lastOffsetByte, err := base.Int64ToByteList(node.KeysOffsetList[len(node.KeysOffsetList)-1])
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[NodeToByteData] 取lastOffsetByte出错"))
+				return nil, err
+			}
+			d = append(d, lastOffsetByte...)
 		}
-		d = append(d, lastOffsetByte...)
 	} else {
 		if len(node.DataValues) != len(node.KeysValueList) {
 			errMsg := "非法叶子结点，长度不对"
@@ -892,7 +894,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 	var (
 		curNode                           = tree.Root // 当前 node
 		checkDeleteLeafNodeOffset         = make([]int64, 0)
-		needDeleteLeafNodeOffset          = make([]int64, 0)
+		needDeleteNodeOffset              = make([]int64, 0)
 		checkDeleteLeafNodeOffsetToParent = make([]int64, 0)
 		parentOffsetMap                   = make(map[int64]*ParentInfo)
 		err                               base.StandardError
@@ -964,9 +966,9 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
 			return err
 		}
-		remainItem, leftCheck, rightCheck, err := dNode.LeafNodeDelete(key, tree.TableInfo)
+		remainItem, leftCheck, rightCheck, err := dNode.LeafNodeClear(key, tree.TableInfo)
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.LeafNodeDelete 错误: %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.LeafNodeClear 错误: %s", err.Error()))
 			return err
 		}
 		if leftCheck && dNode.Offset != base.RootOffsetValue && dNode.BeforeNodeOffset != base.OffsetNull {
@@ -977,7 +979,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 		}
 		if remainItem == 0 && dNode.Offset != base.RootOffsetValue {
 			checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, dNode.Offset)
-			needDeleteLeafNodeOffset = append(needDeleteLeafNodeOffset, dNode.Offset)
+			needDeleteNodeOffset = append(needDeleteNodeOffset, dNode.Offset)
 			// 左右结点的连接信息也需要处理
 			if dNode.BeforeNodeOffset != base.OffsetNull {
 				beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
@@ -1080,23 +1082,33 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.OffsetLoadNode] 错误: %s", err.Error()))
 				return err
 			}
-			remainItem, hasFirstChange, hasLastChange, err := dNode.IndexNodeDelete(childNodeOffset, tree)
+			remainItem, hasFirstChange, hasLastChange, err := dNode.IndexNodeClear(childNodeOffset, tree)
 			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.IndexNodeDelete 错误: %s", err.Error()))
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] curNode.IndexNodeClear 错误: %s", err.Error()))
 				return err
 			}
-			if remainItem == 0 && dNode.Offset != base.RootOffsetValue {
-				checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, dNode.Offset)
-				success, err := tree.ResourceManager.Delete(dNode.Offset)
+			if remainItem == 0 && dNode.Offset == base.RootOffsetValue {
+				var newRootOffset int64
+				if hasFirstChange == true {
+					newRootOffset = dNode.KeysOffsetList[len(dNode.KeysOffsetList)-1]
+				} else {
+					newRootOffset = dNode.KeysOffsetList[0]
+				}
+				err := tree.ChangeRoot(newRootOffset)
 				if err != nil {
-					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Delete 错误: %s", err.Error()))
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.ChangeRoot] 错误: %s", err.Error()))
 					return err
 				}
-				if !success {
-					errMsg := fmt.Sprintf("删除offset <%d>失败", dNode.Offset)
-					utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
-					return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+				needDeleteNodeOffset = append(needDeleteNodeOffset, dNode.Offset)
+				// 需要刷新parentOffsetMap
+				parentOffsetMap, err = tree.NodeParentMap()
+				if err != nil {
+					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.NodeParentMap]错误: %s", err.Error()))
+					return err
 				}
+			} else if remainItem == 0 && dNode.Offset != base.RootOffsetValue {
+				checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, dNode.Offset)
+				needDeleteNodeOffset = append(needDeleteNodeOffset, dNode.Offset)
 				// 左右结点的连接信息也需要处理
 				if dNode.BeforeNodeOffset != base.OffsetNull {
 					beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
@@ -1220,13 +1232,12 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
 					}
 				}
-
 			}
 		}
 	}
 
-	// 3 leaf结点删除
-	for _, offset := range needDeleteLeafNodeOffset {
+	// 3 结点删除
+	for _, offset := range needDeleteNodeOffset {
 		success, err := tree.ResourceManager.Delete(offset)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Delete 错误: %s", err.Error()))
@@ -1263,7 +1274,33 @@ func (tree *BPlusTree) Search(key int64) interface{} {
 	return nil
 }
 
-func (node *BPlusTreeNode) LeafNodeDelete(key []byte, tableInfo *tableSchema.TableMetaInfo) (int, bool, bool, base.StandardError) {
+func (tree *BPlusTree) ChangeRoot(newRootOffset int64) base.StandardError {
+	newRoot, err := tree.OffsetLoadNode(newRootOffset)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.ChangeRoot.OffsetLoadNode] 错误: %s", err.Error()))
+		return err
+	}
+	tree.Root = newRoot
+	tree.Root.Offset = base.RootOffsetValue
+	nodeByte, err := tree.Root.NodeToByteData(tree.TableInfo)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.ChangeRoot] dNodeByte.NodeToByteData 错误: %s", err.Error()))
+		return err
+	}
+	success, err := tree.ResourceManager.Writer(tree.Root.Offset, nodeByte)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+		return err
+	}
+	if !success {
+		errMsg := fmt.Sprintf("写入offset <%d>失败", tree.Root.Offset)
+		utils.LogError(fmt.Sprintf("[BPlusTree.Delete] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+	}
+	return nil
+}
+
+func (node *BPlusTreeNode) LeafNodeClear(key []byte, tableInfo *tableSchema.TableMetaInfo) (int, bool, bool, base.StandardError) {
 	if !node.IsLeaf {
 		errMsg := fmt.Sprintf("非leaf结点使用leaf删除")
 		utils.LogError(fmt.Sprintf("[BPlusTreeNode.LeafDelete] %s", errMsg))
@@ -1314,7 +1351,7 @@ func (node *BPlusTreeNode) LeafNodeDelete(key []byte, tableInfo *tableSchema.Tab
 	return len(node.KeysValueList), leftCheck, rightCheck, nil
 }
 
-func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, bool, bool, base.StandardError) {
+func (node *BPlusTreeNode) IndexNodeClear(offset int64, tree *BPlusTree) (int, bool, bool, base.StandardError) {
 	if node.IsLeaf {
 		errMsg := fmt.Sprintf("leaf结点使用非leaf删除")
 		utils.LogError(fmt.Sprintf("[BPlusTreeNode.NoLeafDelete] %s", errMsg))
@@ -1351,6 +1388,10 @@ func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, 
 				hasFirstChange = true
 				if len(node.KeysValueList) > 1 {
 					deleteKeyFunc(index)
+				} else if node.Offset == base.RootOffsetValue {
+					// root 节点需要特殊处理
+					hasFirstChange = true
+					return 0, hasFirstChange, hasLastChange, nil
 				} else if node.BeforeNodeOffset == base.OffsetNull {
 					deleteNodeFunc()
 				} else {
@@ -1365,6 +1406,10 @@ func (node *BPlusTreeNode) IndexNodeDelete(offset int64, tree *BPlusTree) (int, 
 				hasLastChange = true
 				if len(node.KeysValueList) > 1 {
 					deleteKeyFunc(index)
+				} else if node.Offset == base.RootOffsetValue {
+					// root 节点需要特殊处理
+					hasLastChange = true
+					return 0, hasFirstChange, hasLastChange, nil
 				} else if node.AfterNodeOffset == base.OffsetNull {
 					deleteNodeFunc()
 				} else {
@@ -1563,6 +1608,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	tree.TableInfo = tableInfo
 
 	// 2. 处理root node
+	resourceMap := make(map[int64][]byte, 0)
 	rootNode := jsonTree.Root
 	if rootNode == nil {
 		errMsg := "rootNode 为空"
@@ -1575,8 +1621,13 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 		return nil, err
 	}
 	tree.Root = rootNode.JSONTypeToOriginalType()
+	byteData, err := tree.Root.NodeToByteData(tree.TableInfo)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
+		return nil, err
+	}
+	resourceMap[tree.Root.Offset] = byteData
 
-	resourceMap := make(map[int64][]byte, 0)
 	// 3. 处理非 root 的每个 node
 	if jsonTree.ValueNode != nil && len(jsonTree.ValueNode) > 0 {
 		for _, node := range jsonTree.ValueNode {
