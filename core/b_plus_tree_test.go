@@ -2336,8 +2336,8 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 		t.Error("Expected true")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 
@@ -2373,8 +2373,8 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 		t.Error("Expected 0")
 		return
 	}
-	if hasFirstChange != true {
-		t.Error("Expected true")
+	if hasFirstChange != false {
+		t.Error("Expected false")
 		return
 	}
 	if hasLastChange != true {
@@ -2418,8 +2418,8 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 		t.Error("Expected true")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 
@@ -2459,8 +2459,8 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 		t.Error("Expected true")
 		return
 	}
-	if hasLastChange != true {
-		t.Error("Expected true")
+	if hasLastChange != false {
+		t.Error("Expected false")
 		return
 	}
 
@@ -2496,8 +2496,8 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 		t.Error("Expected 0")
 		return
 	}
-	if hasFirstChange != true {
-		t.Error("Expected true")
+	if hasFirstChange != false {
+		t.Error("Expected false")
 		return
 	}
 	if hasLastChange != true {
@@ -2742,6 +2742,21 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
+	testJsonString = "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"5\",\"5\"],\"data_values\":[{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	testTree, err = LoadBPlusTreeFromJson([]byte(testJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	isSame, err = testTree.CompareBPlusTreesSame(tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 
 	keyValueByte, err = base.StringToByteList("5")
 	if err != nil {
@@ -2753,8 +2768,21 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 		t.Error("Expected nil error, but got error")
 		return
 	}
-
-	// TODO
+	testJsonString = "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	testTree, err = LoadBPlusTreeFromJson([]byte(testJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	isSame, err = testTree.CompareBPlusTreesSame(tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got true ")
+		return
+	}
 
 	jsonString, err = tree.BPlusTreeToJson()
 	if err != nil {
@@ -2765,4 +2793,54 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 
 	utils.LogDebug("Delete_2 test pass")
 
+}
+
+func TestBPlusTree_Delete_3(t *testing.T) {
+	_ = os.Setenv("LOG_DEV", "1")
+	_ = os.Setenv("LOG_DEV_LEVEL", "0")
+	_ = os.Setenv("LOG_DEV_MODULES", "All")
+	pageSize := 1000
+	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
+
+	rawJsonString := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"5\",\"5\"],\"data_values\":[{\"age\":\"26\",\"name\":\"cc\"},{\"age\":\"23\",\"name\":\"ab\"}]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	tree, err := LoadBPlusTreeFromJson([]byte(rawJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	keyValueByte, err := base.StringToByteList("5")
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	err = tree.Delete(keyValueByte)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+
+	testJsonString := "{\"root_node\":{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":0,\"before_node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[],\"data_values\":[]},\"value_node\":[],\"table_info\":{\"name\":\"users\",\"primary_key\":{\"name\":\"id\",\"length\":8,\"default\":\"\",\"type\":\"string\"},\"value\":[{\"name\":\"name\",\"length\":20,\"default\":\"\",\"type\":\"string\"},{\"name\":\"age\",\"length\":8,\"default\":\"\",\"type\":\"string\"}]},\"leaf_order\":4,\"index_order\":4}"
+	testTree, err := LoadBPlusTreeFromJson([]byte(testJsonString))
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	isSame, err := testTree.CompareBPlusTreesSame(tree)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+		return
+	}
+	if !isSame {
+		t.Error("Expected false, but got false ")
+		return
+	}
+
+	jsonString, err := tree.BPlusTreeToJson()
+	if err != nil {
+		t.Error("Expected error, but got nil")
+		return
+	}
+	utils.LogDebug(jsonString)
+
+	utils.LogDebug("Delete_3 test pass")
 }
