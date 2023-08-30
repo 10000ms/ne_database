@@ -778,7 +778,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			}
 			newRoot.KeysValueList = []*ValueInfo{
 				{
-					Value: newNode.KeysValueList[0].Value,
+					Value: curNode.KeysValueList[len(curNode.KeysValueList)-1].Value,
 				},
 			}
 			newRoot.KeysOffsetList = []int64{curNode.Offset, newNode.Offset}
@@ -817,7 +817,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			}
 
 			// 更新父节点的 KeysValueList 和 KeysOffsetList
-			newKey := newNode.KeysValueList[0].Value
+			newKey := curNode.KeysValueList[len(curNode.KeysValueList)-1].Value
 			index := 0
 			for ; index < len(parentNode.KeysValueList); index++ {
 				greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(parentNode.KeysValueList[index].Value, newKey)
@@ -916,6 +916,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 	for !curNode.IsLeaf {
 		index := 0
 		for ; index < len(curNode.KeysValueList); index++ {
+			utils.LogDebug("asdadasdasd111", curNode.Offset, index)
 			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Greater 错误: %s", err.Error()))
@@ -940,6 +941,8 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 			return err
 		}
 	}
+
+	utils.LogDebug("aaa-a-a-a-a", curNode.Offset)
 
 	// 2. 删除键值对
 	checkDeleteLeafNodeOffset = append(checkDeleteLeafNodeOffset, curNode.Offset)
