@@ -916,7 +916,6 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 	for !curNode.IsLeaf {
 		index := 0
 		for ; index < len(curNode.KeysValueList); index++ {
-			utils.LogDebug("asdadasdasd111", curNode.Offset, index)
 			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Greater 错误: %s", err.Error()))
@@ -941,8 +940,6 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 			return err
 		}
 	}
-
-	utils.LogDebug("aaa-a-a-a-a", curNode.Offset)
 
 	// 2. 删除键值对
 	checkDeleteLeafNodeOffset = append(checkDeleteLeafNodeOffset, curNode.Offset)
@@ -1101,6 +1098,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 				} else {
 					newRootOffset = dNode.KeysOffsetList[0]
 				}
+				utils.LogDebug("asdasdsadasd1111", childNodeOffset, newRootOffset, dNode.KeysOffsetList)
 				err := tree.ChangeRoot(newRootOffset)
 				if err != nil {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete.ChangeRoot] 错误: %s", err.Error()))
@@ -1124,7 +1122,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						return err
 					}
 					beforeNode.AfterNodeOffset = dNode.AfterNodeOffset
-					checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1])
+					//checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, beforeNode.KeysOffsetList[len(beforeNode.KeysOffsetList)-1])
 					beforeNodeByte, err := beforeNode.NodeToByteData(tree.TableInfo)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
@@ -1150,7 +1148,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 					afterNode.AfterNodeOffset = dNode.AfterNodeOffset
 					if dNode.BeforeNodeOffset == base.OffsetNull {
 						// 空的话，要拿到前面的 key offset
-						checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, afterNode.KeysOffsetList[0])
+						//checkDeleteLeafNodeOffsetToParent = append(checkDeleteLeafNodeOffsetToParent, afterNode.KeysOffsetList[0])
 					} else {
 						// 要指向beforeNode的-1个KeysOffsetList
 						beforeNode, err := tree.OffsetLoadNode(dNode.BeforeNodeOffset)
