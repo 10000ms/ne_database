@@ -42,3 +42,13 @@ func (s *Int64Set) Members() []int64 {
 	})
 	return members
 }
+
+func (s *Int64Set) Difference(o *Int64Set) *Int64Set {
+	r := NewInt64Set()
+	for _, v := range s.Members() {
+		if !o.Contains(v) {
+			r.Add(v)
+		}
+	}
+	return r
+}

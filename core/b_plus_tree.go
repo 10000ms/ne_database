@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"ne_database/utils/set"
 
 	"ne_database/core/base"
 	"ne_database/core/config"
@@ -885,8 +886,130 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 }
 
 // Update 更新值
-func (tree *BPlusTree) Update(key int64, value interface{}) {
+func (tree *BPlusTree) Update(key []byte, values map[string][]byte) base.StandardError {
+	var (
+		curNode                   = tree.Root // 当前 node
+		checkUpdateLeafNodeOffset = set.NewInt64Set()
+		updatedLeafNodeOffset     = set.NewInt64Set()
+		err                       base.StandardError
+	)
 
+	if key == nil || len(key) == 0 {
+		errMsg := fmt.Sprintf("key 数据为空")
+		utils.LogError(fmt.Sprintf("[BPlusTree.Update] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	}
+
+	if values == nil || len(values) == 0 {
+		errMsg := fmt.Sprintf("values 数据为空")
+		utils.LogError(fmt.Sprintf("[BPlusTree.Update] %s", errMsg))
+		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	}
+
+	// 1. 查找更新位置
+	for !curNode.IsLeaf {
+		index := 0
+		for ; index < len(curNode.KeysValueList); index++ {
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Greater 错误: %s", err.Error()))
+				return err
+			}
+			if greater {
+				break
+			}
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Equal 错误: %s", err.Error()))
+				return err
+			}
+			if equal {
+				break
+			}
+		}
+		nextOffset := curNode.KeysOffsetList[index]
+		curNode, err = tree.OffsetLoadNode(nextOffset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return err
+		}
+	}
+
+	// 2. 修改对应数据
+	checkUpdateLeafNodeOffset.Add(curNode.Offset)
+	for len(checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).Members()) > 0 {
+		nodeOffset := checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).Members()[0]
+		updatedLeafNodeOffset.Add(nodeOffset)
+
+		dNode, err := tree.OffsetLoadNode(nodeOffset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return err
+		}
+
+		hasChange := false
+		for index := 0; index < len(dNode.KeysValueList); index++ {
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(dNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Equal 错误: %s", err.Error()))
+				return err
+			}
+			if equal {
+				hasChange = true
+
+				if index == 0 && dNode.BeforeNodeOffset != base.OffsetNull {
+					checkUpdateLeafNodeOffset.Add(dNode.BeforeNodeOffset)
+				}
+				if index == len(dNode.DataValues)-1 && dNode.AfterNodeOffset != base.OffsetNull {
+					checkUpdateLeafNodeOffset.Add(dNode.AfterNodeOffset)
+				}
+
+				for valueName, v := range values {
+					if v == nil {
+						errMsg := fmt.Sprintf("field<%s> 对应 values 内容为nil", valueName)
+						utils.LogError(fmt.Sprintf("[BPlusTree.Update] %s", errMsg))
+						return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+
+					}
+					_, ok := dNode.DataValues[index][valueName]
+					if !ok {
+						errMsg := fmt.Sprintf("field<%s> 不存在", valueName)
+						utils.LogError(fmt.Sprintf("[BPlusTree.Update] %s", errMsg))
+						return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+					}
+					dNode.DataValues[index][valueName].Value = v
+				}
+			}
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(dNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Greater 错误: %s", err.Error()))
+				return err
+			}
+			if greater {
+				break
+			}
+		}
+
+		if hasChange {
+			dNodeByte, err := dNode.NodeToByteData(tree.TableInfo)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] curNode.NodeToByteData 错误: %s", err.Error()))
+				return err
+			}
+			success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
+				return err
+			}
+			if !success {
+				errMsg := fmt.Sprintf("写入offset <%d>失败", dNode.Offset)
+				utils.LogError(fmt.Sprintf("[BPlusTree.Update] %s", errMsg))
+				return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+			}
+		}
+	}
+
+	return nil
 }
 
 // Delete 删除键值对
@@ -1263,25 +1386,97 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 	return nil
 }
 
-// Search 查找键对应的值
-func (tree *BPlusTree) Search(key int64) interface{} {
-	//curNode := tree.Root
-	//for curNode != nil {
-	//	index := 0
-	//	for ; index < len(curNode.Keys); index++ {
-	//		if curNode.Keys[index] > key {
-	//			break
-	//		}
-	//		if curNode.Keys[index] == key {
-	//			return curNode.Values[index]
-	//		}
-	//	}
-	//	if curNode.IsLeaf {
-	//		break
-	//	}
-	//	curNode = curNode.Child[index]
-	//}
-	return nil
+// SearchEqualKey 查找键对应的值
+func (tree *BPlusTree) SearchEqualKey(key []byte) ([][]byte, []map[string][]byte, base.StandardError) {
+	var (
+		curNode                 = tree.Root // 当前 node
+		waitCheckLeafNodeOffset = set.NewInt64Set()
+		checkedLeafNodeOffset   = set.NewInt64Set()
+		retKeyList              = make([][]byte, 0)
+		retValueList            = make([]map[string][]byte, 0)
+		err                     base.StandardError
+	)
+
+	if key == nil || len(key) == 0 {
+		errMsg := fmt.Sprintf("key 数据为空")
+		utils.LogError(fmt.Sprintf("[BPlusTree.SearchEqualKey] %s", errMsg))
+		return nil, nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+	}
+
+	// 1. 查找位置
+	for !curNode.IsLeaf {
+		index := 0
+		for ; index < len(curNode.KeysValueList); index++ {
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Greater 错误: %s", err.Error()))
+				return nil, nil, err
+			}
+			if greater {
+				break
+			}
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(curNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Equal 错误: %s", err.Error()))
+				return nil, nil, err
+			}
+			if equal {
+				break
+			}
+		}
+		nextOffset := curNode.KeysOffsetList[index]
+		curNode, err = tree.OffsetLoadNode(nextOffset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return nil, nil, err
+		}
+	}
+
+	// 2. 获取对应数据
+	waitCheckLeafNodeOffset.Add(curNode.Offset)
+	for len(waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).Members()) > 0 {
+		nodeOffset := waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).Members()[0]
+		checkedLeafNodeOffset.Add(nodeOffset)
+
+		dNode, err := tree.OffsetLoadNode(nodeOffset)
+		if err != nil {
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.SearchEqualKey] tree.OffsetLoadNode 错误: %s", err.Error()))
+			return nil, nil, err
+		}
+
+		for index := 0; index < len(dNode.KeysValueList); index++ {
+			equal, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Equal(dNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.SearchEqualKey] Equal 错误: %s", err.Error()))
+				return nil, nil, err
+			}
+			if equal {
+				if index == 0 && dNode.BeforeNodeOffset != base.OffsetNull {
+					waitCheckLeafNodeOffset.Add(dNode.BeforeNodeOffset)
+				}
+				if index == len(dNode.DataValues)-1 && dNode.AfterNodeOffset != base.OffsetNull {
+					waitCheckLeafNodeOffset.Add(dNode.AfterNodeOffset)
+				}
+
+				retKeyList = append(retKeyList, dNode.KeysValueList[index].Value)
+				values := make(map[string][]byte)
+				for k, v := range dNode.DataValues[index] {
+					values[k] = v.Value
+				}
+				retValueList = append(retValueList, values)
+			}
+			greater, err := tree.TableInfo.PrimaryKeyFieldInfo.FieldType.Greater(dNode.KeysValueList[index].Value, key)
+			if err != nil {
+				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] Greater 错误: %s", err.Error()))
+				return nil, nil, err
+			}
+			if greater {
+				break
+			}
+		}
+	}
+
+	return retKeyList, retValueList, nil
 }
 
 func (tree *BPlusTree) ChangeRoot(newRootOffset int64) base.StandardError {
