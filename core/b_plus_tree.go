@@ -3,14 +3,14 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"ne_database/utils/set"
 
 	"ne_database/core/base"
 	"ne_database/core/config"
-	"ne_database/core/resource"
+	"ne_database/core/data_io"
 	tableSchema "ne_database/core/table_schema"
 	"ne_database/utils"
 	"ne_database/utils/list"
+	"ne_database/utils/set"
 )
 
 type ValueInfo struct {
@@ -19,11 +19,11 @@ type ValueInfo struct {
 
 // BPlusTree B+树结构体
 type BPlusTree struct {
-	Root            *BPlusTreeNode             // 根节点
-	TableInfo       *tableSchema.TableMetaInfo // B+树对应的表信息
-	LeafOrder       int                        // 叶子节点的B+树的阶数
-	IndexOrder      int                        // 非叶子节点的B+树的阶数
-	ResourceManager resource.IOManager         // 资源文件的获取方法
+	Root        *BPlusTreeNode             // 根节点
+	TableInfo   *tableSchema.TableMetaInfo // B+树对应的表信息
+	LeafOrder   int                        // 叶子节点的B+树的阶数
+	IndexOrder  int                        // 非叶子节点的B+树的阶数
+	DataManager data_io.IOManager          // 资源文件的获取方法
 }
 
 type BPlusTreeNode struct {
@@ -263,7 +263,7 @@ func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *
 }
 
 func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.StandardError) {
-	rm := tree.ResourceManager
+	rm := tree.DataManager
 	nodeData, er := rm.Reader(offset)
 	if er != nil {
 		utils.LogError("[BPlusTreeNode OffsetToNode Reader] 读取数据错误 " + er.Error())
@@ -539,9 +539,9 @@ func (tree *BPlusTree) LoadAllNode() (map[int64]*BPlusTreeNode, base.StandardErr
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("空的 offsets, 跳过"))
 			continue
 		}
-		nodeByte, err := tree.ResourceManager.Reader(offset)
+		nodeByte, err := tree.DataManager.Reader(offset)
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadAllNode.ResourceManager.Reader]错误: %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadAllNode.DataManager.Reader]错误: %s", err.Error()))
 			return nil, err
 		}
 		node := BPlusTreeNode{}
@@ -673,7 +673,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			splitIndex = tree.IndexOrder / 2
 		}
 
-		nextEmptyOffset, err := tree.ResourceManager.AssignEmptyPage()
+		nextEmptyOffset, err := tree.DataManager.AssignEmptyPage()
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] GetNextEmptyOffset 错误: %s", err.Error()))
 			return err
@@ -749,7 +749,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 			}
 
 			// curNode 需要分配新的 offset 再记录
-			nextEmptyOffset, err := tree.ResourceManager.AssignEmptyPage()
+			nextEmptyOffset, err := tree.DataManager.AssignEmptyPage()
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] GetNextEmptyOffset 错误: %s", err.Error()))
 				return err
@@ -870,7 +870,7 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 	// 4. 更新涉及到的 page 落盘
 	// FIXME 写不成功需要考虑整体回滚
 	for offset, data := range waitWriterMap {
-		success, err := tree.ResourceManager.Writer(offset, data)
+		success, err := tree.DataManager.Writer(offset, data)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Insert] Writer 错误: %s", err.Error()))
 			return err
@@ -996,7 +996,7 @@ func (tree *BPlusTree) Update(key []byte, values map[string][]byte) base.Standar
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Update] curNode.NodeToByteData 错误: %s", err.Error()))
 				return err
 			}
-			success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
+			success, err := tree.DataManager.Writer(dNode.Offset, dNodeByte)
 			if err != nil {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 				return err
@@ -1117,7 +1117,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 					return err
 				}
-				success, err := tree.ResourceManager.Writer(beforeNode.Offset, beforeNodeByte)
+				success, err := tree.DataManager.Writer(beforeNode.Offset, beforeNodeByte)
 				if err != nil {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 					return err
@@ -1140,7 +1140,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 					return err
 				}
-				success, err := tree.ResourceManager.Writer(afterNode.Offset, afterNodeByte)
+				success, err := tree.DataManager.Writer(afterNode.Offset, afterNodeByte)
 				if err != nil {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 					return err
@@ -1160,7 +1160,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 		if dNode.Offset == base.RootOffsetValue {
 			tree.Root = dNode
 		}
-		success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
+		success, err := tree.DataManager.Writer(dNode.Offset, dNodeByte)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 			return err
@@ -1257,7 +1257,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 						return err
 					}
-					success, err := tree.ResourceManager.Writer(beforeNode.Offset, beforeNodeByte)
+					success, err := tree.DataManager.Writer(beforeNode.Offset, beforeNodeByte)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 						return err
@@ -1291,7 +1291,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 						return err
 					}
-					success, err := tree.ResourceManager.Writer(afterNode.Offset, afterNodeByte)
+					success, err := tree.DataManager.Writer(afterNode.Offset, afterNodeByte)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 						return err
@@ -1308,7 +1308,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 					return err
 				}
-				success, err := tree.ResourceManager.Writer(dNode.Offset, dNodeByte)
+				success, err := tree.DataManager.Writer(dNode.Offset, dNodeByte)
 				if err != nil {
 					utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 					return err
@@ -1331,7 +1331,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 						return err
 					}
-					success, err := tree.ResourceManager.Writer(beforeNode.Offset, beforeNodeByte)
+					success, err := tree.DataManager.Writer(beforeNode.Offset, beforeNodeByte)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 						return err
@@ -1354,7 +1354,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 						return err
 					}
-					success, err := tree.ResourceManager.Writer(afterNode.Offset, afterNodeByte)
+					success, err := tree.DataManager.Writer(afterNode.Offset, afterNodeByte)
 					if err != nil {
 						utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 						return err
@@ -1371,7 +1371,7 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 
 	// 3 结点删除
 	for _, offset := range needDeleteNodeOffset {
-		success, err := tree.ResourceManager.Delete(offset)
+		success, err := tree.DataManager.Delete(offset)
 		if err != nil {
 			utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Delete 错误: %s", err.Error()))
 			return err
@@ -1495,7 +1495,7 @@ func (tree *BPlusTree) ChangeRoot(newRootOffset int64) base.StandardError {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.ChangeRoot] dNodeByte.NodeToByteData 错误: %s", err.Error()))
 		return err
 	}
-	success, err := tree.ResourceManager.Writer(tree.Root.Offset, nodeByte)
+	success, err := tree.DataManager.Writer(tree.Root.Offset, nodeByte)
 	if err != nil {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[BPlusTree.Delete] Writer 错误: %s", err.Error()))
 		return err
@@ -1816,7 +1816,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	tree.TableInfo = tableInfo
 
 	// 2. 处理root node
-	resourceMap := make(map[int64][]byte, 0)
+	dataMap := make(map[int64][]byte, 0)
 	rootNode := jsonTree.Root
 	if rootNode == nil {
 		errMsg := "rootNode 为空"
@@ -1834,7 +1834,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
 		return nil, err
 	}
-	resourceMap[tree.Root.Offset] = byteData
+	dataMap[tree.Root.Offset] = byteData
 
 	// 3. 处理非 root 的每个 node
 	if jsonTree.ValueNode != nil && len(jsonTree.ValueNode) > 0 {
@@ -1855,13 +1855,13 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 				utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.node.GetValueAndKeyInfo] NodeToByteData错误: %s", err.Error()))
 				return nil, err
 			}
-			resourceMap[originalNode.Offset] = byteData
+			dataMap[originalNode.Offset] = byteData
 		}
 	}
 
 	// 4. json加载的表, 添加使用的内存数据引擎
-	manager := resource.InitMemoryConfig(resourceMap)
-	tree.ResourceManager = manager
+	manager := data_io.InitMemoryManagerData(dataMap)
+	tree.DataManager = manager
 
 	// 5. 处理阶数
 	tree.IndexOrder = jsonTree.IndexOrder
@@ -2012,7 +2012,7 @@ func (tree *BPlusTree) CompareBPlusTreesSame(tree2 *BPlusTree) (bool, base.Stand
 		}
 	}
 
-	// ResourceManager 是否一致不关心
+	// DataManager 是否一致不关心
 
 	return true, nil
 }

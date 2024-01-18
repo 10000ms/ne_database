@@ -1,4 +1,4 @@
-package resource
+package data_io
 
 import (
 	"ne_database/core/base"
@@ -9,7 +9,7 @@ type MemoryManager struct {
 	Storage map[int64][]byte
 }
 
-func InitMemoryConfig(initData map[int64][]byte) *MemoryManager {
+func InitMemoryManagerData(initData map[int64][]byte) *MemoryManager {
 	c := MemoryManager{}
 
 	if initData != nil {
@@ -36,6 +36,10 @@ func (c *MemoryManager) Writer(offset int64, data []byte) (bool, base.StandardEr
 func (c *MemoryManager) Delete(offset int64) (bool, base.StandardError) {
 	delete(c.Storage, offset)
 	return true, nil
+}
+
+func (c *MemoryManager) Close() base.StandardError {
+	return nil
 }
 
 func (c *MemoryManager) AssignEmptyPage() (int64, base.StandardError) {

@@ -8,11 +8,14 @@ import (
 
 	"ne_database/core/base"
 	"ne_database/core/config"
-	"ne_database/core/resource"
+	"ne_database/core/data_io"
 	tableSchema "ne_database/core/table_schema"
 	"ne_database/utils"
 	"ne_database/utils/list"
 )
+
+// var initManagerFunc = data_io.InitMemoryManagerData
+var initManagerFunc = data_io.InitFileManagerData
 
 func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	// 初始化一下
@@ -667,7 +670,7 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	resourceMap := make(map[int64][]byte, 0)
+	dataMap := make(map[int64][]byte, 0)
 
 	m1 := []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // BeforeNodeOffset: -1
@@ -717,10 +720,13 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
-	// resourceMap放进去这些初始值
-	resourceMap[1000] = m1
-	resourceMap[2000] = m2
-	resourceMap[3000] = m3
+	// dataMap放进去这些初始值
+	dataMap[1000] = m1
+	dataMap[2000] = m2
+	dataMap[3000] = m3
+
+	dateManager := initManagerFunc(dataMap)
+	defer dateManager.Close()
 
 	// 创建B+树
 	tree := BPlusTree{
@@ -756,9 +762,9 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 
 	jsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[1000,2000,3000],\"offset\":0,\"before_" +
@@ -796,7 +802,7 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	resourceMap := make(map[int64][]byte, 0)
+	dataMap := make(map[int64][]byte, 0)
 
 	m1 := []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // BeforeNodeOffset: -1
@@ -846,10 +852,13 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
-	// resourceMap放进去这些初始值
-	resourceMap[1000] = m1
-	resourceMap[2000] = m2
-	resourceMap[3000] = m3
+	// dataMap放进去这些初始值
+	dataMap[1000] = m1
+	dataMap[2000] = m2
+	dataMap[3000] = m3
+
+	dateManager := initManagerFunc(dataMap)
+	defer dateManager.Close()
 
 	// 创建B+树
 	tree := BPlusTree{
@@ -885,9 +894,9 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 
 	treeJson, err := tree.BPlusTreeToJson()
@@ -922,7 +931,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	resourceMap := make(map[int64][]byte, 0)
+	dataMap := make(map[int64][]byte, 0)
 
 	m1 := []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // BeforeNodeOffset: -1
@@ -972,10 +981,13 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
-	// resourceMap放进去这些初始值
-	resourceMap[1000] = m1
-	resourceMap[2000] = m2
-	resourceMap[3000] = m3
+	// dataMap放进去这些初始值
+	dataMap[1000] = m1
+	dataMap[2000] = m2
+	dataMap[3000] = m3
+
+	dateManager := initManagerFunc(dataMap)
+	defer dateManager.Close()
 
 	// 创建两个相同的B+树
 	tree1 := BPlusTree{
@@ -1011,9 +1023,9 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 	tree2 := BPlusTree{
 		Root: &BPlusTreeNode{
@@ -1048,9 +1060,9 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 
 	// 对比两个树，期望为true
@@ -1095,9 +1107,9 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 
 	// 对比两个树，期望为 false
@@ -1109,7 +1121,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		t.Error("Expected false, but got true ")
 	}
 
-	resourceMap2 := make(map[int64][]byte, 0)
+	dataMap2 := make(map[int64][]byte, 0)
 
 	m4 := []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xd0, // BeforeNodeOffset: 2000
@@ -1127,10 +1139,13 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
-	// resourceMap放进去这些初始值
-	resourceMap2[1000] = m1
-	resourceMap2[2000] = m2
-	resourceMap2[3000] = m4
+	dateManager2 := initManagerFunc(dataMap2)
+	defer dateManager2.Close()
+
+	// dataMap放进去这些初始值
+	dataMap2[1000] = m1
+	dataMap2[2000] = m2
+	dataMap2[3000] = m4
 
 	tree4 := BPlusTree{
 		Root: &BPlusTreeNode{
@@ -1165,9 +1180,9 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap2),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager2,
 	}
 
 	// 对比两个树，期望为 false
@@ -1212,9 +1227,9 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       1,
-		IndexOrder:      1,
-		ResourceManager: resource.InitMemoryConfig(resourceMap),
+		LeafOrder:   1,
+		IndexOrder:  1,
+		DataManager: dateManager,
 	}
 
 	// 对比两个树，期望为 false
@@ -1536,6 +1551,9 @@ func TestBPlusTree_Insert(t *testing.T) {
 
 	var err base.StandardError
 
+	dateManager := initManagerFunc(nil)
+	defer dateManager.Close()
+
 	// 创建B+树
 	tree := BPlusTree{
 		Root: &BPlusTreeNode{
@@ -1567,9 +1585,9 @@ func TestBPlusTree_Insert(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       4,
-		IndexOrder:      4,
-		ResourceManager: resource.InitMemoryConfig(nil),
+		LeafOrder:   4,
+		IndexOrder:  4,
+		DataManager: dateManager,
 	}
 
 	err = tree.Insert([]byte{}, [][]byte{})
@@ -1615,6 +1633,9 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		isSame     bool
 	)
 
+	dateManager := initManagerFunc(nil)
+	defer dateManager.Close()
+
 	// 创建B+树
 	tree := BPlusTree{
 		Root: &BPlusTreeNode{
@@ -1646,9 +1667,9 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       4,
-		IndexOrder:      4,
-		ResourceManager: resource.InitMemoryConfig(nil),
+		LeafOrder:   4,
+		IndexOrder:  4,
+		DataManager: dateManager,
 	}
 
 	byteListKeyValue1 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
@@ -1944,6 +1965,9 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 		isSame     bool
 	)
 
+	dateManager := initManagerFunc(nil)
+	defer dateManager.Close()
+
 	// 创建B+树
 	tree := BPlusTree{
 		Root: &BPlusTreeNode{
@@ -1975,9 +1999,9 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 				},
 			},
 		},
-		LeafOrder:       4,
-		IndexOrder:      4,
-		ResourceManager: resource.InitMemoryConfig(nil),
+		LeafOrder:   4,
+		IndexOrder:  4,
+		DataManager: dateManager,
 	}
 
 	byteListKeyValue1 := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03} // 3
