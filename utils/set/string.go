@@ -2,43 +2,45 @@ package set
 
 import "sync"
 
-type StringSet struct {
-	entries *sync.Map
+type StringsSet struct {
+	setItems *sync.Map
 }
 
-func NewStringSet(values ...string) *StringSet {
-	var entries sync.Map
-	for _, value := range values {
-		entries.Store(value, 0)
+func NewStringsSet(strings ...string) *StringsSet {
+	var setItems sync.Map
+	for _, v := range strings {
+		setItems.Store(v, 0)
 	}
-	return &StringSet{entries: &entries}
+	return &StringsSet{setItems: &setItems}
 }
 
-func (s *StringSet) Add(values ...string) {
-	for _, value := range values {
-		s.entries.Store(value, 0)
-	}
-}
-
-func (s *StringSet) Delete(values ...string) {
-	for _, value := range values {
-		s.entries.Delete(value)
+func (s *StringsSet) Add(strings ...string) {
+	for _, v := range strings {
+		s.setItems.Store(v, 0)
 	}
 }
 
-func (s *StringSet) Contains(values string) bool {
-	_, ok := s.entries.Load(values)
+func (s *StringsSet) Delete(strings ...string) {
+	for _, v := range strings {
+		s.setItems.Delete(v)
+	}
+}
+
+func (s *StringsSet) Contain(v string) bool {
+	_, ok := s.setItems.Load(v)
 	return ok
 }
 
-func (s *StringSet) Members() []string {
-	var members []string
-	s.entries.Range(func(key, value interface{}) bool {
-		v, ok := key.(string)
-		if ok {
-			members = append(members, v)
-		}
-		return value != nil
-	})
-	return members
+func (s *StringsSet) TotalMember() []string {
+	var totalMember []string
+	s.setItems.Range(
+		func(key, value interface{}) bool {
+			v, ok := key.(string)
+			if ok {
+				totalMember = append(totalMember, v)
+			}
+			return value != nil
+		},
+	)
+	return totalMember
 }

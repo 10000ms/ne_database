@@ -2,51 +2,53 @@ package set
 
 import "sync"
 
-type Int64Set struct {
-	entries *sync.Map
+type Int64sSet struct {
+	setItems *sync.Map
 }
 
-func NewInt64Set(values ...int64) *Int64Set {
-	var entries sync.Map
-	for _, value := range values {
-		entries.Store(value, 0)
+func NewInt64sSet(int64s ...int64) *Int64sSet {
+	var setItems sync.Map
+	for _, v := range int64s {
+		setItems.Store(v, 0)
 	}
-	return &Int64Set{entries: &entries}
+	return &Int64sSet{setItems: &setItems}
 }
 
-func (s *Int64Set) Add(values ...int64) {
-	for _, value := range values {
-		s.entries.Store(value, 0)
-	}
-}
-
-func (s *Int64Set) Delete(values ...int64) {
-	for _, value := range values {
-		s.entries.Delete(value)
+func (s *Int64sSet) Add(int64s ...int64) {
+	for _, v := range int64s {
+		s.setItems.Store(v, 0)
 	}
 }
 
-func (s *Int64Set) Contains(values int64) bool {
-	_, ok := s.entries.Load(values)
+func (s *Int64sSet) Delete(int64s ...int64) {
+	for _, v := range int64s {
+		s.setItems.Delete(v)
+	}
+}
+
+func (s *Int64sSet) Contain(v int64) bool {
+	_, ok := s.setItems.Load(v)
 	return ok
 }
 
-func (s *Int64Set) Members() []int64 {
-	var members []int64
-	s.entries.Range(func(key, value interface{}) bool {
-		v, ok := key.(int64)
-		if ok {
-			members = append(members, v)
-		}
-		return value != nil
-	})
-	return members
+func (s *Int64sSet) TotalMember() []int64 {
+	var totalMember []int64
+	s.setItems.Range(
+		func(key, value interface{}) bool {
+			v, ok := key.(int64)
+			if ok {
+				totalMember = append(totalMember, v)
+			}
+			return value != nil
+		},
+	)
+	return totalMember
 }
 
-func (s *Int64Set) Difference(o *Int64Set) *Int64Set {
-	r := NewInt64Set()
-	for _, v := range s.Members() {
-		if !o.Contains(v) {
+func (s *Int64sSet) Difference(otherSet *Int64sSet) *Int64sSet {
+	r := NewInt64sSet()
+	for _, v := range s.TotalMember() {
+		if !otherSet.Contain(v) {
 			r.Add(v)
 		}
 	}

@@ -83,7 +83,7 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
 		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置为空"))
 	}
-	existName := set.NewStringSet()
+	existName := set.NewStringsSet()
 	for _, i := range info.ValueFieldInfo {
 		if i == nil {
 			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置为空"))
@@ -94,7 +94,7 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 			utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
 			return err
 		}
-		if existName.Contains(i.Name) {
+		if existName.Contain(i.Name) {
 			utils.LogError(fmt.Sprintf("[Verification] 表校验错误, 值配置名<%s>重复", i.Name))
 			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("值配置名<%s>重复", i.Name))
 		}

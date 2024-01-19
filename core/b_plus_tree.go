@@ -889,8 +889,8 @@ func (tree *BPlusTree) Insert(key []byte, value [][]byte) base.StandardError {
 func (tree *BPlusTree) Update(key []byte, values map[string][]byte) base.StandardError {
 	var (
 		curNode                   = tree.Root // 当前 node
-		checkUpdateLeafNodeOffset = set.NewInt64Set()
-		updatedLeafNodeOffset     = set.NewInt64Set()
+		checkUpdateLeafNodeOffset = set.NewInt64sSet()
+		updatedLeafNodeOffset     = set.NewInt64sSet()
 		err                       base.StandardError
 	)
 
@@ -937,8 +937,8 @@ func (tree *BPlusTree) Update(key []byte, values map[string][]byte) base.Standar
 
 	// 2. 修改对应数据
 	checkUpdateLeafNodeOffset.Add(curNode.Offset)
-	for len(checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).Members()) > 0 {
-		nodeOffset := checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).Members()[0]
+	for len(checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).TotalMember()) > 0 {
+		nodeOffset := checkUpdateLeafNodeOffset.Difference(updatedLeafNodeOffset).TotalMember()[0]
 		updatedLeafNodeOffset.Add(nodeOffset)
 
 		dNode, err := tree.OffsetLoadNode(nodeOffset)
@@ -1390,8 +1390,8 @@ func (tree *BPlusTree) Delete(key []byte) base.StandardError {
 func (tree *BPlusTree) SearchEqualKey(key []byte) ([][]byte, []map[string][]byte, base.StandardError) {
 	var (
 		curNode                 = tree.Root // 当前 node
-		waitCheckLeafNodeOffset = set.NewInt64Set()
-		checkedLeafNodeOffset   = set.NewInt64Set()
+		waitCheckLeafNodeOffset = set.NewInt64sSet()
+		checkedLeafNodeOffset   = set.NewInt64sSet()
 		retKeyList              = make([][]byte, 0)
 		retValueList            = make([]map[string][]byte, 0)
 		err                     base.StandardError
@@ -1434,8 +1434,8 @@ func (tree *BPlusTree) SearchEqualKey(key []byte) ([][]byte, []map[string][]byte
 
 	// 2. 获取对应数据
 	waitCheckLeafNodeOffset.Add(curNode.Offset)
-	for len(waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).Members()) > 0 {
-		nodeOffset := waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).Members()[0]
+	for len(waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).TotalMember()) > 0 {
+		nodeOffset := waitCheckLeafNodeOffset.Difference(checkedLeafNodeOffset).TotalMember()[0]
 		checkedLeafNodeOffset.Add(nodeOffset)
 
 		dNode, err := tree.OffsetLoadNode(nodeOffset)

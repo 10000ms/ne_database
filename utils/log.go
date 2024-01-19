@@ -27,7 +27,7 @@ type logDevConfig struct {
 	IsInit      bool
 	InLogDev    bool
 	LowestLevel int
-	Modules     *set.StringSet
+	Modules     *set.StringsSet
 }
 
 func (l *logDevConfig) Init() {
@@ -44,7 +44,7 @@ func (l *logDevConfig) Init() {
 	if moduleString != "" {
 		m = strings.Split(moduleString, ",")
 	}
-	l.Modules = set.NewStringSet(m...)
+	l.Modules = set.NewStringsSet(m...)
 	l.IsInit = true
 }
 
@@ -133,7 +133,7 @@ func LogDev(module string, level int) func(...interface{}) {
 	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {
 		return NilLogFunc
 	}
-	if logDevManger.Modules.Contains(module) || logDevManger.Modules.Contains("All") {
+	if logDevManger.Modules.Contain(module) || logDevManger.Modules.Contain("All") {
 		return func(value ...interface{}) {
 			log("[Dev Info]", value, fgGreen, 2)
 		}
