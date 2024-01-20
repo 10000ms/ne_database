@@ -931,7 +931,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
-	dataMap := make(map[int64][]byte, 0)
+	dataMap := make(map[int64][]byte)
 
 	m1 := []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // BeforeNodeOffset: -1
@@ -1139,13 +1139,13 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
-	dateManager2 := initManagerFunc(dataMap2)
-	defer dateManager2.Close()
-
 	// dataMap放进去这些初始值
 	dataMap2[1000] = m1
 	dataMap2[2000] = m2
 	dataMap2[3000] = m4
+
+	dateManager2 := initManagerFunc(dataMap2)
+	defer dateManager2.Close()
 
 	tree4 := BPlusTree{
 		Root: &BPlusTreeNode{

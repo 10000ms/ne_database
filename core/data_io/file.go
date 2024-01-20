@@ -2,6 +2,7 @@ package data_io
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -16,7 +17,7 @@ type FileManager struct {
 }
 
 func InitFileManagerData(initData map[int64][]byte) *FileManager {
-	addr := fmt.Sprintf("./test_data_%d", time.Now().Unix())
+	addr := fmt.Sprintf("./test_data_%d_%d", rand.Intn(10000), time.Now().Unix())
 	c := FileManager{
 		FileAddr: addr,
 	}
@@ -136,14 +137,23 @@ func (c *FileManager) Close() base.StandardError {
 
 func (c *FileManager) AssignEmptyPage() (int64, base.StandardError) {
 	if c.file == nil {
-		err := c.open()
-		if err != nil {
-			return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		er := c.open()
+		if er != nil {
+			return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
 		}
 	}
-	fi, err := os.Stat(c.FileAddr)
-	if err != nil {
-		return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+	fi, er := os.Stat(c.FileAddr)
+	if er != nil {
+		return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
 	}
-	return fi.Size(), nil
+	offset := fi.Size()
+	var (
+		pageSize = config.CoreConfig.PageSize
+		data     = make([]byte, pageSize)
+	)
+	_, err := c.Writer(offset, data)
+	if err != nil {
+		return 0, err
+	}
+	return offset, nil
 }
