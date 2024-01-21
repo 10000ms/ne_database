@@ -14,8 +14,9 @@ import (
 	"ne_database/utils/list"
 )
 
-// var initManagerFunc = data_io.InitMemoryManagerData
-var initManagerFunc = data_io.InitFileManagerData
+var initManagerFunc = data_io.InitMemoryManagerData
+
+//var initManagerFunc = data_io.InitFileManagerData
 
 func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	// 初始化一下
@@ -720,7 +721,45 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
+	root := &BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("aa")},
+			{Value: []byte("bb")},
+		},
+		KeysOffsetList:   []int64{1000, 2000, 3000},
+		DataValues:       nil,
+		Offset:           0,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    4 * 2,
+			FieldType: tableSchema.StringType,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
 	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
 	dataMap[1000] = m1
 	dataMap[2000] = m2
 	dataMap[3000] = m3
@@ -730,45 +769,15 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 
 	// 创建B+树
 	tree := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
 		DataManager: dateManager,
 	}
 
 	jsonString := "{\"root_node\":{\"is_leaf\":false,\"keys_offset_list\":[1000,2000,3000],\"offset\":0,\"before_" +
-		"node_offset\":456,\"after_node_offset\":789,\"keys_value\":[\"aa\",\"bb\"],\"data_value" +
+		"node_offset\":-1,\"after_node_offset\":-1,\"keys_value\":[\"aa\",\"bb\"],\"data_value" +
 		"s\":[]},\"value_node\":[{\"is_leaf\":true,\"keys_offset_list\":null,\"offset\":1000,\"before_node_offset\":" +
 		"-1,\"after_node_offset\":2000,\"keys_value\":[\"a\",\"b\"],\"data_values\":[{\"age\":\"20" +
 		"\",\"name\":\"Alice\"},{\"age\":\"22\",\"name\":\"Bob\"}]},{\"is_leaf\":true,\"keys_offset_list\":null,\"offs" +
@@ -852,7 +861,45 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
+	root := &BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("aa")},
+			{Value: []byte("bb")},
+		},
+		KeysOffsetList:   []int64{1000, 2000, 3000},
+		DataValues:       nil,
+		Offset:           0,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    4 * 2,
+			FieldType: tableSchema.StringType,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
 	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
 	dataMap[1000] = m1
 	dataMap[2000] = m2
 	dataMap[3000] = m3
@@ -862,38 +909,8 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 
 	// 创建B+树
 	tree := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
 		DataManager: dateManager,
@@ -932,6 +949,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
 
 	dataMap := make(map[int64][]byte)
+	dataMap2 := make(map[int64][]byte)
 
 	m1 := []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // BeforeNodeOffset: -1
@@ -981,7 +999,45 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // AfterNodeOffset: -1
 	}...)
 
+	root := &BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("aa")},
+			{Value: []byte("bb")},
+		},
+		KeysOffsetList:   []int64{1000, 2000, 3000},
+		DataValues:       nil,
+		Offset:           0,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    4 * 2,
+			FieldType: tableSchema.StringType,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
 	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
 	dataMap[1000] = m1
 	dataMap[2000] = m2
 	dataMap[3000] = m3
@@ -991,75 +1047,15 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 
 	// 创建两个相同的B+树
 	tree1 := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
 		DataManager: dateManager,
 	}
 	tree2 := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
 		DataManager: dateManager,
@@ -1074,42 +1070,38 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		t.Error("Expected true, but got false ")
 	}
 
+	root2 := &BPlusTreeNode{
+		IsLeaf: false,
+		KeysValueList: []*ValueInfo{
+			{Value: []byte("ab")},
+			{Value: []byte("bb")},
+		},
+		KeysOffsetList:   []int64{1000, 2000, 3000},
+		DataValues:       nil,
+		Offset:           0,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	rootByte2, err := root2.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
+	// dataMap放进去这些初始值
+	dataMap2[base.RootOffsetValue] = rootByte2
+	dataMap2[1000] = m1
+	dataMap2[2000] = m2
+	dataMap2[3000] = m3
+
+	dateManager2 := initManagerFunc(dataMap)
+	defer dateManager2.Close()
+
 	tree3 := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("ab")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root2,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
-		DataManager: dateManager,
+		DataManager: dateManager2,
 	}
 
 	// 对比两个树，期望为 false
@@ -1119,9 +1111,10 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	}
 	if isSame {
 		t.Error("Expected false, but got true ")
+		return
 	}
 
-	dataMap2 := make(map[int64][]byte, 0)
+	dataMap3 := make(map[int64][]byte, 0)
 
 	m4 := []byte{
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0xd0, // BeforeNodeOffset: 2000
@@ -1140,49 +1133,20 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	}...)
 
 	// dataMap放进去这些初始值
-	dataMap2[1000] = m1
-	dataMap2[2000] = m2
-	dataMap2[3000] = m4
+	dataMap3[base.RootOffsetValue] = rootByte
+	dataMap3[1000] = m1
+	dataMap3[2000] = m2
+	dataMap3[3000] = m4
 
-	dateManager2 := initManagerFunc(dataMap2)
-	defer dateManager2.Close()
+	dateManager3 := initManagerFunc(dataMap3)
+	defer dateManager3.Close()
 
 	tree4 := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    4 * 2,
-				FieldType: tableSchema.StringType,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   1,
 		IndexOrder:  1,
-		DataManager: dateManager2,
+		DataManager: dateManager3,
 	}
 
 	// 对比两个树，期望为 false
@@ -1195,18 +1159,7 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	}
 
 	tree5 := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf: false,
-			KeysValueList: []*ValueInfo{
-				{Value: []byte("aa")},
-				{Value: []byte("bb")},
-			},
-			KeysOffsetList:   []int64{1000, 2000, 3000},
-			DataValues:       nil,
-			Offset:           0,
-			BeforeNodeOffset: 456,
-			AfterNodeOffset:  789,
-		},
+		Root: root,
 		TableInfo: &tableSchema.TableMetaInfo{
 			Name: "users",
 			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
@@ -1551,40 +1504,51 @@ func TestBPlusTree_Insert(t *testing.T) {
 
 	var err base.StandardError
 
-	dateManager := initManagerFunc(nil)
+	dataMap := make(map[int64][]byte)
+	root := &BPlusTreeNode{
+		IsLeaf:           true,
+		KeysValueList:    []*ValueInfo{},
+		KeysOffsetList:   nil,
+		DataValues:       []map[string]*ValueInfo{},
+		Offset:           base.RootOffsetValue,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
+	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
+
+	dateManager := initManagerFunc(dataMap)
 	defer dateManager.Close()
 
 	// 创建B+树
 	tree := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf:           true,
-			KeysValueList:    []*ValueInfo{},
-			KeysOffsetList:   nil,
-			DataValues:       []map[string]*ValueInfo{},
-			Offset:           base.RootOffsetValue,
-			BeforeNodeOffset: base.OffsetNull,
-			AfterNodeOffset:  base.OffsetNull,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    8,
-				FieldType: tableSchema.Int64Type,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   4,
 		IndexOrder:  4,
 		DataManager: dateManager,
@@ -1633,40 +1597,51 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		isSame     bool
 	)
 
-	dateManager := initManagerFunc(nil)
+	dataMap := make(map[int64][]byte)
+	root := &BPlusTreeNode{
+		IsLeaf:           true,
+		KeysValueList:    []*ValueInfo{},
+		KeysOffsetList:   nil,
+		DataValues:       []map[string]*ValueInfo{},
+		Offset:           base.RootOffsetValue,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
+	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
+
+	dateManager := initManagerFunc(dataMap)
 	defer dateManager.Close()
 
 	// 创建B+树
 	tree := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf:           true,
-			KeysValueList:    []*ValueInfo{},
-			KeysOffsetList:   nil,
-			DataValues:       []map[string]*ValueInfo{},
-			Offset:           base.RootOffsetValue,
-			BeforeNodeOffset: base.OffsetNull,
-			AfterNodeOffset:  base.OffsetNull,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    8,
-				FieldType: tableSchema.Int64Type,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   4,
 		IndexOrder:  4,
 		DataManager: dateManager,
@@ -1965,40 +1940,51 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 		isSame     bool
 	)
 
-	dateManager := initManagerFunc(nil)
+	dataMap := make(map[int64][]byte)
+	root := &BPlusTreeNode{
+		IsLeaf:           true,
+		KeysValueList:    []*ValueInfo{},
+		KeysOffsetList:   nil,
+		DataValues:       []map[string]*ValueInfo{},
+		Offset:           base.RootOffsetValue,
+		BeforeNodeOffset: base.OffsetNull,
+		AfterNodeOffset:  base.OffsetNull,
+	}
+	tableInfo := &tableSchema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableSchema.Int64Type,
+		},
+		ValueFieldInfo: []*tableSchema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableSchema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    4 * 2, // 假设最长2字
+				FieldType: tableSchema.StringType,
+			},
+		},
+	}
+	rootByte, err := root.NodeToByteData(tableInfo)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+
+	// dataMap放进去这些初始值
+	dataMap[base.RootOffsetValue] = rootByte
+
+	dateManager := initManagerFunc(dataMap)
 	defer dateManager.Close()
 
 	// 创建B+树
 	tree := BPlusTree{
-		Root: &BPlusTreeNode{
-			IsLeaf:           true,
-			KeysValueList:    []*ValueInfo{},
-			KeysOffsetList:   nil,
-			DataValues:       []map[string]*ValueInfo{},
-			Offset:           base.RootOffsetValue,
-			BeforeNodeOffset: base.OffsetNull,
-			AfterNodeOffset:  base.OffsetNull,
-		},
-		TableInfo: &tableSchema.TableMetaInfo{
-			Name: "users",
-			PrimaryKeyFieldInfo: &tableSchema.FieldInfo{
-				Name:      "id",
-				Length:    8,
-				FieldType: tableSchema.Int64Type,
-			},
-			ValueFieldInfo: []*tableSchema.FieldInfo{
-				{
-					Name:      "name",
-					Length:    4 * 5, // 假设最长5字
-					FieldType: tableSchema.StringType,
-				},
-				{
-					Name:      "age",
-					Length:    4 * 2, // 假设最长2字
-					FieldType: tableSchema.StringType,
-				},
-			},
-		},
+		Root:        root,
+		TableInfo:   tableInfo,
 		LeafOrder:   4,
 		IndexOrder:  4,
 		DataManager: dateManager,
