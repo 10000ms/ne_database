@@ -6,7 +6,8 @@ import (
 )
 
 type MemoryManager struct {
-	Storage map[int64][]byte
+	Storage   map[int64][]byte
+	tableName string
 }
 
 func InitMemoryManagerData(initData map[int64][]byte) *MemoryManager {
@@ -19,6 +20,10 @@ func InitMemoryManagerData(initData map[int64][]byte) *MemoryManager {
 	}
 
 	return &c
+}
+
+func (c *MemoryManager) GetTableName() string {
+	return c.tableName
 }
 
 func (c *MemoryManager) Reader(offset int64) ([]byte, base.StandardError) {

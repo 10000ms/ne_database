@@ -12,17 +12,19 @@ import (
 )
 
 type FileManager struct {
-	FileAddr string
-	file     *os.File
+	tableName string
+	baseDir   string
+	file      *os.File
 }
 
 func InitFileManagerData(initData map[int64][]byte) *FileManager {
-	addr := fmt.Sprintf("./test_data_%d_%d", rand.Intn(10000), time.Now().Unix())
+	tableName := fmt.Sprintf("test_data_%d_%d", rand.Intn(10000), time.Now().Unix())
 	c := FileManager{
-		FileAddr: addr,
+		tableName: tableName,
+		baseDir:   "./",
 	}
 
-	err := c.CreateFile(addr)
+	err := c.CreateFile(c.getTableDataFileAddr())
 	if err != nil {
 		utils.LogError(fmt.Sprintf("[InitFileManagerData] 创建文件失败: %s", err.Error()))
 		return nil
@@ -42,8 +44,20 @@ func InitFileManagerData(initData map[int64][]byte) *FileManager {
 	return &c
 }
 
-func (c *FileManager) open() base.StandardError {
-	_, err := os.Stat(c.FileAddr)
+func (c *FileManager) getTableDataFileAddr() string {
+	return c.baseDir + c.tableName + "." + base.DataIOFileTableDataSuffix
+}
+
+func (c *FileManager) getTableDataSchemaAddr() string {
+	return c.baseDir + c.tableName + "." + base.DataIOFileTableSchemaSuffix
+}
+
+func (c *FileManager) GetTableName() string {
+	return c.tableName
+}
+
+func (c *FileManager) open(fileAddr string) base.StandardError {
+	_, err := os.Stat(fileAddr)
 	if err != nil {
 		if os.IsNotExist(err) {
 			utils.LogError(fmt.Sprintf("[FileManager.open] 文件不存在: %s", err.Error()))
@@ -52,11 +66,11 @@ func (c *FileManager) open() base.StandardError {
 		if os.IsPermission(err) {
 			utils.LogError(fmt.Sprintf("[FileManager.open] 没有权限对文件进行操作: %s", err.Error()))
 		}
-		return base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		return base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
-	f, err := os.OpenFile(c.FileAddr, os.O_RDWR, os.ModePerm)
+	f, err := os.OpenFile(fileAddr, os.O_RDWR, os.ModePerm)
 	if err != nil {
-		return base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		return base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
 	c.file = f
 	return nil
@@ -65,7 +79,7 @@ func (c *FileManager) open() base.StandardError {
 func (c *FileManager) CreateFile(addr string) base.StandardError {
 	f, err := os.Create(addr)
 	if err != nil {
-		return base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		return base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
 	c.file = f
 	return nil
@@ -73,9 +87,9 @@ func (c *FileManager) CreateFile(addr string) base.StandardError {
 
 func (c *FileManager) Reader(offset int64) ([]byte, base.StandardError) {
 	if c.file == nil {
-		err := c.open()
+		err := c.open(c.getTableDataFileAddr())
 		if err != nil {
-			return nil, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+			return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
 	var (
@@ -85,7 +99,7 @@ func (c *FileManager) Reader(offset int64) ([]byte, base.StandardError) {
 
 	_, err := c.file.ReadAt(data, offset)
 	if err != nil {
-		return nil, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
 
 	return data, nil
@@ -93,29 +107,29 @@ func (c *FileManager) Reader(offset int64) ([]byte, base.StandardError) {
 
 func (c *FileManager) Writer(offset int64, data []byte) (bool, base.StandardError) {
 	if c.file == nil {
-		err := c.open()
+		err := c.open(c.getTableDataFileAddr())
 		if err != nil {
-			return false, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+			return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
 	var (
 		pageSize = config.CoreConfig.PageSize
 	)
 	if len(data) != pageSize {
-		return false, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf("需要写入的data长度: %d 和配置的长度: %d 不一致", len(data), pageSize))
+		return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf("需要写入的data长度: %d 和配置的长度: %d 不一致", len(data), pageSize))
 	}
 	_, err := c.file.WriteAt(data, offset)
 	if err != nil {
-		return false, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+		return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
 	return true, nil
 }
 
 func (c *FileManager) Delete(offset int64) (bool, base.StandardError) {
 	if c.file == nil {
-		err := c.open()
+		err := c.open(c.getTableDataFileAddr())
 		if err != nil {
-			return false, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+			return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
 	var (
@@ -129,7 +143,7 @@ func (c *FileManager) Close() base.StandardError {
 	if c.file != nil {
 		err := c.file.Close()
 		if err != nil {
-			return base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
+			return base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
 	return nil
@@ -137,14 +151,14 @@ func (c *FileManager) Close() base.StandardError {
 
 func (c *FileManager) AssignEmptyPage() (int64, base.StandardError) {
 	if c.file == nil {
-		er := c.open()
+		er := c.open(c.getTableDataFileAddr())
 		if er != nil {
-			return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
+			return 0, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
 		}
 	}
-	fi, er := os.Stat(c.FileAddr)
+	fi, er := os.Stat(c.getTableDataFileAddr())
 	if er != nil {
-		return 0, base.NewDBError(base.FunctionModelCoreResource, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
+		return 0, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, er)
 	}
 	offset := fi.Size()
 	var (

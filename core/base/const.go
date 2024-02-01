@@ -24,16 +24,19 @@ const (
 	DBDataTypeString DBDataTypeEnumeration = "string"
 
 	// 模块
+	FunctionModelCoreConfig         FunctionModel = "core.config"
+	FunctionModelCoreEngine         FunctionModel = "core.engine"
 	FunctionModelCoreBPlusTree      FunctionModel = "core.b_plus_tree"
 	FunctionModelCoreDataConversion FunctionModel = "core.data_conversion"
 	FunctionModelCoreTableSchema    FunctionModel = "core.table_schema"
-	FunctionModelCoreResource       FunctionModel = "core.resource"
+	FunctionModelCoreDataIO         FunctionModel = "core.data_io"
 
 	// 错误类型
 	ErrorTypeSystem ErrorType = "error.system"
 	ErrorTypeInput  ErrorType = "error.input"
 	ErrorTypeType   ErrorType = "error.type"
 	ErrorTypeIO     ErrorType = "error.io"
+	ErrorTypeConfig ErrorType = "error.config"
 
 	// 错误代码
 	ErrorBaseCodeDefault             = "default"
@@ -44,4 +47,9 @@ const (
 	ErrorBaseCodeIOError             = "io"
 	ErrorBaseCodeNetworkError        = "network"
 	ErrorBaseCodeCoreLogicError      = "code_logic_error"
+	ErrorBaseCodeConfigError         = "config"
+	ErrorBaseCodeTableSchemaError    = "table_schema"
+
+	DataIOFileTableDataSuffix   = "nedbd"
+	DataIOFileTableSchemaSuffix = "nedbs"
 )
