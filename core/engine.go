@@ -27,7 +27,15 @@ func (e *Engine) CreateTable(tableInfo *tableSchema.TableMetaInfo) base.Standard
 	}
 	err = tableInfo.Verification()
 	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[CreateTable] 表校验错误, %s", err.Error()))
 		return err
 	}
+
+	//tableInfoStr, err := tableInfo.TableMetaInfoToJsonStr()
+	//if err != nil {
+	//	utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[CreateTable] TableMetaInfoToJsonStr错误, %s", err.Error()))
+	//	return err
+	//}
+
 	return nil
 }

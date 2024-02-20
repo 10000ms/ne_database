@@ -14,9 +14,11 @@ import (
 	"ne_database/utils/list"
 )
 
-var initManagerFunc = data_io.InitMemoryManagerData
+// TODO 完成两种储存类型的测试
 
-//var initManagerFunc = data_io.InitFileManagerData
+var testStorageType = base.StorageTypeMemory
+
+//var testStorageType = base.StorageTypeFile
 
 func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	// 初始化一下
@@ -150,6 +152,8 @@ func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	result, err := getLeafNodeByteDataReadLoopData(data, loopTime, tableInfo.PrimaryKeyFieldInfo, tableInfo.ValueFieldInfo)
@@ -297,6 +301,8 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	key1, err := base.Int64ToByteList(int64(1))
@@ -388,6 +394,8 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	keyA, err := base.StringToByteList("a")
@@ -464,6 +472,8 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	key1, err := base.Int64ToByteList(int64(1))
@@ -543,6 +553,8 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	keyA, err := base.StringToByteList("a")
@@ -629,6 +641,8 @@ func TestBPlusTreeNode_BPlusTreeNodeToJson(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 
 	node := &BPlusTreeNode{
@@ -752,6 +766,8 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -764,7 +780,14 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 	dataMap[2000] = m2
 	dataMap[3000] = m3
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建B+树
@@ -892,6 +915,8 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -904,7 +929,14 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 	dataMap[2000] = m2
 	dataMap[3000] = m3
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建B+树
@@ -1030,6 +1062,8 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -1042,7 +1076,14 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	dataMap[2000] = m2
 	dataMap[3000] = m3
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建两个相同的B+树
@@ -1093,7 +1134,10 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	dataMap2[2000] = m2
 	dataMap2[3000] = m3
 
-	dateManager2 := initManagerFunc(dataMap)
+	dateManager2, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager2.Close()
 
 	tree3 := BPlusTree{
@@ -1138,7 +1182,10 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 	dataMap3[2000] = m2
 	dataMap3[3000] = m4
 
-	dateManager3 := initManagerFunc(dataMap3)
+	dateManager3, err := initManagerFunc(dataMap3, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager3.Close()
 
 	tree4 := BPlusTree{
@@ -1179,6 +1226,8 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 					FieldType: tableSchema.StringType,
 				},
 			},
+			PageSize:    config.CoreConfig.PageSize,
+			StorageType: testStorageType,
 		},
 		LeafOrder:   1,
 		IndexOrder:  1,
@@ -1533,6 +1582,8 @@ func TestBPlusTree_Insert(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -1542,7 +1593,14 @@ func TestBPlusTree_Insert(t *testing.T) {
 	// dataMap放进去这些初始值
 	dataMap[base.RootOffsetValue] = rootByte
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建B+树
@@ -1626,6 +1684,8 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -1635,7 +1695,14 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 	// dataMap放进去这些初始值
 	dataMap[base.RootOffsetValue] = rootByte
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建B+树
@@ -1969,6 +2036,8 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 				FieldType: tableSchema.StringType,
 			},
 		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: testStorageType,
 	}
 	rootByte, err := root.NodeToByteData(tableInfo)
 	if err != nil {
@@ -1978,7 +2047,14 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 	// dataMap放进去这些初始值
 	dataMap[base.RootOffsetValue] = rootByte
 
-	dateManager := initManagerFunc(dataMap)
+	initManagerFunc, err := data_io.GetManagerInitFuncByType(testStorageType)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
+	dateManager, err := initManagerFunc(dataMap, config.CoreConfig.PageSize)
+	if err != nil {
+		t.Error("Expected nil error, but got error")
+	}
 	defer dateManager.Close()
 
 	// 创建B+树

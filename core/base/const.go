@@ -50,6 +50,11 @@ const (
 	ErrorBaseCodeConfigError         = "config"
 	ErrorBaseCodeTableSchemaError    = "table_schema"
 
+	// 文件后缀
 	DataIOFileTableDataSuffix   = "nedbd"
 	DataIOFileTableSchemaSuffix = "nedbs"
+
+	// 数据储存类型
+	StorageTypeFile   = "file"
+	StorageTypeMemory = "memory"
 )

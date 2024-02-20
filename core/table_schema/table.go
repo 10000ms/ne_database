@@ -21,6 +21,8 @@ type TableMetaInfo struct {
 	Name                string       `json:"name"`
 	PrimaryKeyFieldInfo *FieldInfo   `json:"primary_key"`
 	ValueFieldInfo      []*FieldInfo `json:"value"`
+	PageSize            int          `json:"page_size"`
+	StorageType         string       `json:"storage_type"`
 }
 
 // Verification 值配置校验
@@ -100,6 +102,15 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 		}
 		existName.Add(i.Name)
 	}
+	if info.PageSize <= 0 {
+		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, PageSize小于等于0"))
+		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("PageSize小于等于0"))
+	}
+	totalStorageType := set.NewStringsSet(base.StorageTypeFile, base.StorageTypeMemory)
+	if !totalStorageType.Contain(info.StorageType) {
+		utils.LogError(fmt.Sprintf("[Verification] 表校验错误, StorageType: %s 不支持", info.StorageType))
+		return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("StorageType: %s 不支持", info.StorageType))
+	}
 	return nil
 }
 
@@ -153,6 +164,34 @@ func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 		}
 	}
 	return nil
+}
+
+func (info *TableMetaInfo) TableMetaInfoToJsonStr() (string, base.StandardError) {
+	var (
+		err      base.StandardError
+		er       error
+		jsonByte []byte
+	)
+
+	err = info.Verification()
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonStr] 表校验错误, %s", err.Error()))
+		return "", err
+	}
+
+	err = info.FillingRawFieldType()
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonStr] 表校验错误, %s", err.Error()))
+		return "", err
+	}
+
+	// 转化 json
+	jsonByte, er = json.Marshal(info)
+	if er != nil {
+		utils.LogError(fmt.Sprintf("[TableMetaInfoToJsonStr] json.Marshal 错误, %s", er.Error()))
+		return "", base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
+	}
+	return string(jsonByte), nil
 }
 
 // InitTableMetaInfo

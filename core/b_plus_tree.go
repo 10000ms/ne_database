@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"ne_database/core/base"
-	"ne_database/core/config"
 	"ne_database/core/data_io"
 	tableSchema "ne_database/core/table_schema"
 	"ne_database/utils"
@@ -294,7 +293,7 @@ func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.Tab
 		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
 	}
 	node.Offset = offset
-	if len(data) != config.CoreConfig.PageSize {
+	if len(data) != tableInfo.PageSize {
 		errMsg := "输入数据长度不对"
 		utils.LogError("[BPlusTreeNode LoadByteData] " + errMsg)
 		return base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf(errMsg))
@@ -503,12 +502,12 @@ func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) 
 	}
 
 	// 5. 补齐中间空余部分
-	if config.CoreConfig.PageSize < len(d)-base.DataByteLengthOffset {
+	if tableInfo.PageSize < len(d)-base.DataByteLengthOffset {
 		errMsg := "结点长度超长"
 		utils.LogError("[NodeToByteData] " + errMsg)
 		return nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, fmt.Errorf(errMsg))
 	}
-	d = append(d, make([]uint8, config.CoreConfig.PageSize-len(d)-base.DataByteLengthOffset)...)
+	d = append(d, make([]uint8, tableInfo.PageSize-len(d)-base.DataByteLengthOffset)...)
 
 	// 6. 取后一个结点的偏移量
 	afterNodeByte, err := base.Int64ToByteList(node.AfterNodeOffset)
@@ -1859,8 +1858,17 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 		}
 	}
 
-	// 4. json加载的表, 添加使用的内存数据引擎
-	manager := data_io.InitMemoryManagerData(dataMap)
+	// 4. json加载的表, 添加使用的数据储存管理器
+	dataManagerFunc, err := data_io.GetManagerInitFuncByType(tree.TableInfo.StorageType)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[LoadBPlusTreeFromJson] GetManagerInitFuncByType 错误: %s", err.Error()))
+		return nil, err
+	}
+	manager, err := dataManagerFunc(dataMap, tableInfo.PageSize)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[LoadBPlusTreeFromJson] dataManagerFunc 错误: %s", err.Error()))
+		return nil, err
+	}
 	tree.DataManager = manager
 
 	// 5. 处理阶数

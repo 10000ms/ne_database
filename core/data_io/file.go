@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"ne_database/core/base"
-	"ne_database/core/config"
 	"ne_database/utils"
 )
 
@@ -15,19 +14,26 @@ type FileManager struct {
 	tableName string
 	baseDir   string
 	file      *os.File
+	pageSize  int
 }
 
-func InitFileManagerData(initData map[int64][]byte) *FileManager {
+func InitFileManagerData(initData map[int64][]byte, pageSize int) (IOManager, base.StandardError) {
+	if pageSize <= 0 {
+		utils.LogError(fmt.Sprintf("[InitFileManagerData] pageSize小于等于0: %d", pageSize))
+		return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("pageSize小于等于0: %d", pageSize))
+	}
+
 	tableName := fmt.Sprintf("test_data_%d_%d", rand.Intn(10000), time.Now().Unix())
 	c := FileManager{
 		tableName: tableName,
 		baseDir:   "./",
+		pageSize:  pageSize,
 	}
 
 	err := c.CreateFile(c.getTableDataFileAddr())
 	if err != nil {
 		utils.LogError(fmt.Sprintf("[InitFileManagerData] 创建文件失败: %s", err.Error()))
-		return nil
+		return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 	}
 
 	for offset, d := range initData {
@@ -37,11 +43,15 @@ func InitFileManagerData(initData map[int64][]byte) *FileManager {
 		_, err := c.Writer(offset, d)
 		if err != nil {
 			utils.LogError(fmt.Sprintf("[InitFileManagerData] 写入文件失败: %s", err.Error()))
-			return nil
+			return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
 
-	return &c
+	return &c, nil
+}
+
+func (c *FileManager) GetPageSize() int {
+	return c.pageSize
 }
 
 func (c *FileManager) getTableDataFileAddr() string {
@@ -93,8 +103,7 @@ func (c *FileManager) Reader(offset int64) ([]byte, base.StandardError) {
 		}
 	}
 	var (
-		pageSize = config.CoreConfig.PageSize
-		data     = make([]byte, pageSize)
+		data = make([]byte, c.pageSize)
 	)
 
 	_, err := c.file.ReadAt(data, offset)
@@ -112,11 +121,8 @@ func (c *FileManager) Writer(offset int64, data []byte) (bool, base.StandardErro
 			return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, err)
 		}
 	}
-	var (
-		pageSize = config.CoreConfig.PageSize
-	)
-	if len(data) != pageSize {
-		return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf("需要写入的data长度: %d 和配置的长度: %d 不一致", len(data), pageSize))
+	if len(data) != c.pageSize {
+		return false, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf("需要写入的data长度: %d 和配置的长度: %d 不一致", len(data), c.pageSize))
 	}
 	_, err := c.file.WriteAt(data, offset)
 	if err != nil {
@@ -133,8 +139,7 @@ func (c *FileManager) Delete(offset int64) (bool, base.StandardError) {
 		}
 	}
 	var (
-		pageSize = config.CoreConfig.PageSize
-		data     = make([]byte, pageSize)
+		data = make([]byte, c.pageSize)
 	)
 	return c.Writer(offset, data)
 }
@@ -162,8 +167,7 @@ func (c *FileManager) AssignEmptyPage() (int64, base.StandardError) {
 	}
 	offset := fi.Size()
 	var (
-		pageSize = config.CoreConfig.PageSize
-		data     = make([]byte, pageSize)
+		data = make([]byte, c.pageSize)
 	)
 	_, err := c.Writer(offset, data)
 	if err != nil {

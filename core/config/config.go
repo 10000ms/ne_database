@@ -13,7 +13,7 @@ type config struct {
 	init bool
 
 	Dev      bool   `json:"Dev"`      // 是否处在开发模式
-	PageSize int    `json:"PageSize"` // 数据一页的大小
+	PageSize int    `json:"PageSize"` // 数据一页的大小（新建表默认）
 	FileAddr string `json:"FileAddr"` // 数据文件存放目录
 }
 
