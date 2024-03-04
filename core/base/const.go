@@ -51,8 +51,8 @@ const (
 	ErrorBaseCodeTableSchemaError    = "table_schema"
 
 	// 文件后缀
-	DataIOFileTableDataSuffix   = "nedbd"
-	DataIOFileTableSchemaSuffix = "nedbs"
+	DataIOFileTableDataSuffix   = "nedb"
+	DataIOFileTableSchemaSuffix = "neds"
 
 	// 数据储存类型
 	StorageTypeFile   = "file"
