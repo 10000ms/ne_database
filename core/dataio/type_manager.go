@@ -1,4 +1,4 @@
-package data_io
+package dataio
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 func GetManagerInitFuncByType(t string) (DataManagerFunc, base.StandardError) {
 	switch t {
 	case base.StorageTypeMemory:
-		return InitFileManagerData, nil
+		return InitMemoryManagerData, nil
 	case base.StorageTypeFile:
 		return InitFileManagerData, nil
 	default:

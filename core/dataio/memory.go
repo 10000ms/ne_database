@@ -1,4 +1,4 @@
-package data_io
+package dataio
 
 import (
 	"fmt"

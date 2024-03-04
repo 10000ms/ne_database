@@ -1,4 +1,4 @@
-package tableSchema
+package tableschema
 
 import (
 	"encoding/json"
@@ -166,7 +166,7 @@ func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 	return nil
 }
 
-func (info *TableMetaInfo) TableMetaInfoToJsonStr() (string, base.StandardError) {
+func (info *TableMetaInfo) TableMetaInfoToJsonByte() ([]byte, base.StandardError) {
 	var (
 		err      base.StandardError
 		er       error
@@ -175,23 +175,23 @@ func (info *TableMetaInfo) TableMetaInfoToJsonStr() (string, base.StandardError)
 
 	err = info.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonStr] 表校验错误, %s", err.Error()))
-		return "", err
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
+		return nil, err
 	}
 
 	err = info.FillingRawFieldType()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonStr] 表校验错误, %s", err.Error()))
-		return "", err
+		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
+		return nil, err
 	}
 
 	// 转化 json
 	jsonByte, er = json.Marshal(info)
 	if er != nil {
-		utils.LogError(fmt.Sprintf("[TableMetaInfoToJsonStr] json.Marshal 错误, %s", er.Error()))
-		return "", base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
+		utils.LogError(fmt.Sprintf("[TableMetaInfoToJsonByte] json.Marshal 错误, %s", er.Error()))
+		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeSystem, base.ErrorBaseCodeInnerDataError, er)
 	}
-	return string(jsonByte), nil
+	return jsonByte, nil
 }
 
 // InitTableMetaInfo

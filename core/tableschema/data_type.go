@@ -1,4 +1,4 @@
-package tableSchema
+package tableschema
 
 import (
 	"fmt"

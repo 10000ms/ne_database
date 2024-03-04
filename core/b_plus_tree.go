@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"ne_database/core/base"
-	"ne_database/core/data_io"
-	tableSchema "ne_database/core/table_schema"
+	"ne_database/core/dataio"
+	"ne_database/core/tableschema"
 	"ne_database/utils"
 	"ne_database/utils/list"
 	"ne_database/utils/set"
@@ -19,10 +19,10 @@ type ValueInfo struct {
 // BPlusTree B+树结构体
 type BPlusTree struct {
 	Root        *BPlusTreeNode             // 根节点
-	TableInfo   *tableSchema.TableMetaInfo // B+树对应的表信息
+	TableInfo   *tableschema.TableMetaInfo // B+树对应的表信息
 	LeafOrder   int                        // 叶子节点的B+树的阶数
 	IndexOrder  int                        // 非叶子节点的B+树的阶数
-	DataManager data_io.IOManager          // 资源文件的获取方法
+	DataManager dataio.IOManager           // 资源文件的获取方法
 }
 
 type BPlusTreeNode struct {
@@ -82,7 +82,7 @@ func (n *BPlusTreeNodeJSON) JSONTypeToOriginalType() *BPlusTreeNode {
 	}
 }
 
-func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(tableInfo *tableSchema.TableMetaInfo) base.StandardError {
+func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(tableInfo *tableschema.TableMetaInfo) base.StandardError {
 	if n.KeysStringValue != nil {
 		n.KeysValueList = make([]*ValueInfo, 0)
 		toByteFunc := tableInfo.PrimaryKeyFieldInfo.FieldType.StringToByte
@@ -142,7 +142,7 @@ func (n *BPlusTreeNodeJSON) GetValueAndKeyInfo(tableInfo *tableSchema.TableMetaI
 	return nil
 }
 
-func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableSchema.TableMetaInfo) base.StandardError {
+func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableschema.TableMetaInfo) base.StandardError {
 	n.KeysStringValue = make([]string, 0)
 	n.DataStringValues = make([]map[string]string, 0)
 
@@ -170,7 +170,7 @@ func (n *BPlusTreeNodeJSON) GetValueAndKeyStringValue(tableInfo *tableSchema.Tab
 
 // getNoLeafNodeByteDataReadLoopData
 // 最后一个offset也需要占用一个完整元素的位置
-func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo) (*noLeafNodeByteDataReadLoopData, base.StandardError) {
+func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableschema.FieldInfo) (*noLeafNodeByteDataReadLoopData, base.StandardError) {
 	var (
 		r   = noLeafNodeByteDataReadLoopData{}
 		err error
@@ -210,7 +210,7 @@ func getNoLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo
 }
 
 // getLeafNodeByteDataReadLoopData
-func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableSchema.FieldInfo, valueInfo []*tableSchema.FieldInfo) (*leafNodeByteDataReadLoopData, base.StandardError) {
+func getLeafNodeByteDataReadLoopData(data []byte, loopTime int, primaryKeyInfo *tableschema.FieldInfo, valueInfo []*tableschema.FieldInfo) (*leafNodeByteDataReadLoopData, base.StandardError) {
 	var (
 		r          = leafNodeByteDataReadLoopData{}
 		loopLength int
@@ -283,7 +283,7 @@ func (tree *BPlusTree) OffsetLoadNode(offset int64) (*BPlusTreeNode, base.Standa
 }
 
 // LoadByteData 从[]byte数据中加载节点结构体
-func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableSchema.TableMetaInfo, data []byte) base.StandardError {
+func (node *BPlusTreeNode) LoadByteData(offset int64, tableInfo *tableschema.TableMetaInfo, data []byte) base.StandardError {
 	var (
 		err base.StandardError
 	)
@@ -393,7 +393,7 @@ func (node *BPlusTreeNode) NodeByteDataLength(tree *BPlusTree) int {
 	return baseLength
 }
 
-func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableSchema.TableMetaInfo) ([]byte, base.StandardError) {
+func (node *BPlusTreeNode) NodeToByteData(tableInfo *tableschema.TableMetaInfo) ([]byte, base.StandardError) {
 	var (
 		d   = make([]byte, 0)
 		err base.StandardError
@@ -1507,7 +1507,7 @@ func (tree *BPlusTree) ChangeRoot(newRootOffset int64) base.StandardError {
 	return nil
 }
 
-func (node *BPlusTreeNode) LeafNodeClear(key []byte, tableInfo *tableSchema.TableMetaInfo) (int, bool, bool, base.StandardError) {
+func (node *BPlusTreeNode) LeafNodeClear(key []byte, tableInfo *tableschema.TableMetaInfo) (int, bool, bool, base.StandardError) {
 	if !node.IsLeaf {
 		errMsg := fmt.Sprintf("非leaf结点使用leaf删除")
 		utils.LogError(fmt.Sprintf("[BPlusTreeNode.LeafDelete] %s", errMsg))
@@ -1807,9 +1807,9 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	}
 
 	// 1. 处理table info
-	tableInfo, err := tableSchema.InitTableMetaInfoByJson(utils.ToJSON(jsonTree.RawTableInfo))
+	tableInfo, err := tableschema.InitTableMetaInfoByJson(utils.ToJSON(jsonTree.RawTableInfo))
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.tableSchema.InitTableMetaInfoByJson]错误: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 10)(fmt.Sprintf("[LoadBPlusTreeFromJson.tableschema.InitTableMetaInfoByJson]错误: %s", err.Error()))
 		return nil, err
 	}
 	tree.TableInfo = tableInfo
@@ -1859,7 +1859,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	}
 
 	// 4. json加载的表, 添加使用的数据储存管理器
-	dataManagerFunc, err := data_io.GetManagerInitFuncByType(tree.TableInfo.StorageType)
+	dataManagerFunc, err := dataio.GetManagerInitFuncByType(tree.TableInfo.StorageType)
 	if err != nil {
 		utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[LoadBPlusTreeFromJson] GetManagerInitFuncByType 错误: %s", err.Error()))
 		return nil, err
@@ -1878,7 +1878,7 @@ func LoadBPlusTreeFromJson(jsonData []byte) (*BPlusTree, base.StandardError) {
 	return &tree, nil
 }
 
-func (node *BPlusTreeNode) BPlusTreeNodeToJson(tableInfo *tableSchema.TableMetaInfo) (string, base.StandardError) {
+func (node *BPlusTreeNode) BPlusTreeNodeToJson(tableInfo *tableschema.TableMetaInfo) (string, base.StandardError) {
 	b := BPlusTreeNodeJSON{
 		BPlusTreeNode: *node,
 	}

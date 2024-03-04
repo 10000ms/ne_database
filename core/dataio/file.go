@@ -1,4 +1,4 @@
-package data_io
+package dataio
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func InitFileManagerData(initData map[int64][]byte, pageSize int) (IOManager, ba
 		return nil, base.NewDBError(base.FunctionModelCoreDataIO, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf("pageSize小于等于0: %d", pageSize))
 	}
 
-	tableName := fmt.Sprintf("test_data_%d_%d", rand.Intn(10000), time.Now().Unix())
+	tableName := fmt.Sprintf("test_data_%d_%d", rand.Intn(1000000), time.Now().Unix())
 	c := FileManager{
 		tableName: tableName,
 		baseDir:   "./",
