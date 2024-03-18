@@ -11,6 +11,131 @@ import (
 	"ne_database/utils"
 )
 
+func TestEngine_CheckTableExist(t *testing.T) {
+	testName := "testTable"
+	tableSchemaFilePath := fmt.Sprintf("%s%s.%s", config.CoreConfig.FileAddr, testName, base.DataIOFileTableSchemaSuffix)
+	tableDataFilePath := fmt.Sprintf("%s%s.%s", config.CoreConfig.FileAddr, testName, base.DataIOFileTableDataSuffix)
+
+	e := Engine{}
+	exist, err := e.CheckTableExist(testName)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if exist {
+		t.Errorf("unexpected value: %v", exist)
+		return
+	}
+
+	_, er := os.Create(tableSchemaFilePath)
+	if er != nil {
+		t.Errorf("unexpected error: %v", er)
+		return
+	}
+
+	exist, err = e.CheckTableExist(testName)
+	if err == nil {
+		t.Errorf("expected error, but got: %v", err)
+		return
+	}
+
+	_, er = os.Create(tableDataFilePath)
+	if er != nil {
+		t.Errorf("unexpected error: %v", er)
+		return
+	}
+
+	exist, err = e.CheckTableExist(testName)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if !exist {
+		t.Errorf("unexpected value: %v", exist)
+		return
+	}
+
+	er = os.Remove(tableSchemaFilePath)
+	if er != nil {
+		t.Errorf("unexpected error: %v", er)
+		return
+	}
+
+	exist, err = e.CheckTableExist(testName)
+	if err == nil {
+		t.Errorf("expected error, but got: %v", err)
+		return
+	}
+
+	er = os.Remove(tableDataFilePath)
+	if er != nil {
+		t.Errorf("unexpected error: %v", er)
+		return
+	}
+
+	exist, err = e.CheckTableExist(testName)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if exist {
+		t.Errorf("unexpected value: %v", exist)
+		return
+	}
+
+}
+
+func TestEngine_LoadTableSchemaInfo(t *testing.T) {
+	tableInfo := &tableschema.TableMetaInfo{
+		Name: "users",
+		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableschema.Int64Type,
+		},
+		ValueFieldInfo: []*tableschema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableschema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    8,
+				FieldType: tableschema.Int64Type,
+			},
+		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: base.StorageTypeFile,
+	}
+
+	e := Engine{}
+	err := e.CreateTable(tableInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	loadTable, err := e.LoadTableSchemaInfo(tableInfo.Name)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	isSame := loadTable.CompareTableInfo(tableInfo)
+	if !isSame {
+		t.Errorf("unexpected same")
+		return
+	}
+
+	// 测试之后删除
+	er := e.DeleteTable(tableInfo.Name)
+	if er != nil {
+		t.Errorf("unexpected error: %v", er)
+		return
+	}
+}
+
 func TestEngine_CreateTable(t *testing.T) {
 	tableInfo := &tableschema.TableMetaInfo{
 		Name: "users",
@@ -121,12 +246,7 @@ func TestEngine_CreateTable(t *testing.T) {
 	}
 
 	// 测试之后删除
-	er = os.Remove(tableSchemaFilePath)
-	if er != nil {
-		t.Errorf("unexpected error: %v", er)
-		return
-	}
-	er = os.Remove(tableDataFilePath)
+	er = e.DeleteTable(tableInfo.Name)
 	if er != nil {
 		t.Errorf("unexpected error: %v", er)
 		return
