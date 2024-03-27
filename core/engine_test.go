@@ -252,3 +252,100 @@ func TestEngine_CreateTable(t *testing.T) {
 		return
 	}
 }
+
+func TestEngine_AllTable(t *testing.T) {
+	e := Engine{}
+
+	userTableName := "users"
+	userTableInfo := &tableschema.TableMetaInfo{
+		Name: userTableName,
+		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableschema.Int64Type,
+		},
+		ValueFieldInfo: []*tableschema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableschema.StringType,
+			},
+			{
+				Name:      "age",
+				Length:    8,
+				FieldType: tableschema.Int64Type,
+			},
+		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: base.StorageTypeFile,
+	}
+
+	err := e.CreateTable(userTableInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	personTableName := "person"
+	personTableInfo := &tableschema.TableMetaInfo{
+		Name: personTableName,
+		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
+			Name:      "id",
+			Length:    8,
+			FieldType: tableschema.Int64Type,
+		},
+		ValueFieldInfo: []*tableschema.FieldInfo{
+			{
+				Name:      "name",
+				Length:    4 * 5, // 假设最长5字
+				FieldType: tableschema.StringType,
+			},
+			{
+				Name:      "idCard",
+				Length:    8,
+				FieldType: tableschema.Int64Type,
+			},
+		},
+		PageSize:    config.CoreConfig.PageSize,
+		StorageType: base.StorageTypeFile,
+	}
+
+	err = e.CreateTable(personTableInfo)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+
+	allTableSchema, err := e.AllTable()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if len(allTableSchema) != 2 {
+		t.Errorf("unexpected num")
+		return
+	}
+
+	isSame := allTableSchema[userTableName].CompareTableInfo(userTableInfo)
+	if !isSame {
+		t.Errorf("expected same")
+		return
+	}
+	isSame = allTableSchema[personTableName].CompareTableInfo(personTableInfo)
+	if !isSame {
+		t.Errorf("expected same")
+		return
+	}
+
+	// 测试之后删除
+	err = e.DeleteTable(userTableName)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	err = e.DeleteTable(personTableName)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+}

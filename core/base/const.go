@@ -57,4 +57,9 @@ const (
 	// 数据储存类型
 	StorageTypeFile   = "file"
 	StorageTypeMemory = "memory"
+
+	// 比较符
+	DataComparatorGreater DataComparator = "greater"
+	DataComparatorEqual   DataComparator = "equal"
+	DataComparatorLess    DataComparator = "less"
 )

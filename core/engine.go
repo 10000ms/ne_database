@@ -2,12 +2,14 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"ne_database/core/base"
 	"ne_database/core/config"
 	"ne_database/core/tableschema"
 	"ne_database/utils"
-	"os"
-	"path/filepath"
+	"ne_database/utils/set"
 )
 
 type Engine struct {
@@ -107,19 +109,51 @@ func (e *Engine) DeleteTable(tableName string) base.StandardError {
 
 func (e *Engine) AllTable() (map[string]*tableschema.TableMetaInfo, base.StandardError) {
 
+	entries, err := os.ReadDir(config.CoreConfig.FileAddr)
+	if err != nil {
+		errMsg := fmt.Sprintf("读取 %s 目录发生错误: %s", config.CoreConfig.FileAddr, err.Error())
+		utils.LogError("[Engine AllTable] " + errMsg)
+		return nil, base.NewDBError(base.FunctionModelCoreEngine, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+	}
 
-	// 递归遍历目录
-	err := filepath.Walk(config.CoreConfig.FileAddr, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("访问文件或目录时发生错误: %s\n", err)
-			return nil // 继续遍历其他文件
-		}
+	var (
+		tableSet       = set.NewStringsSet()
+		allTableSchema = make(map[string]*tableschema.TableMetaInfo)
+	)
 
-		// 如果是文件，累加大小
-		if !info.IsDir() {
-			totalSize += info.Size()
+	for _, entry := range entries {
+		if entry != nil {
+			info, err := entry.Info()
+			if err != nil {
+				errMsg := fmt.Sprintf("读取 %s 文件info发生错误: %s", config.CoreConfig.FileAddr, err.Error())
+				utils.LogError("[Engine AllTable] " + errMsg)
+				return nil, base.NewDBError(base.FunctionModelCoreEngine, base.ErrorTypeIO, base.ErrorBaseCodeIOError, fmt.Errorf(errMsg))
+			}
+			if !info.IsDir() {
+				// 不是文件夹，且是目标文件
+				rawName := info.Name()
+				if strings.HasSuffix(info.Name(), base.DataIOFileTableSchemaSuffix) {
+					n := strings.Replace(rawName, fmt.Sprintf(".%s", base.DataIOFileTableSchemaSuffix), "", 1)
+					tableSet.Add(n)
+				} else if strings.HasSuffix(info.Name(), base.DataIOFileTableDataSuffix) {
+					n := strings.Replace(rawName, fmt.Sprintf(".%s", base.DataIOFileTableDataSuffix), "", 1)
+					tableSet.Add(n)
+				}
+
+			}
 		}
 	}
+	for _, n := range tableSet.TotalMember() {
+		if n == "" {
+			continue
+		}
+		schema, er := e.LoadTableSchemaInfo(n)
+		if er != nil {
+			return nil, er
+		}
+		allTableSchema[schema.Name] = schema
+	}
+	return allTableSchema, nil
 }
 
 // CreateTable 建表
@@ -176,11 +210,11 @@ func (e *Engine) CreateTable(tableInfo *tableschema.TableMetaInfo) base.Standard
 	return nil
 }
 
-//// Select 表查询
-//func (e *Engine) Select(tableName string) (int64, [][]byte, base.StandardError) {
-//
+// Select 表查询
+//func (e *Engine) Select(tableName string, whereArgs []*base.WherePartItem) (int64, [][]byte, base.StandardError) {
+// // TODO
 //}
-//
+
 //// Insert 表插入
 //func (e *Engine) Insert() (int64, base.StandardError) {
 //

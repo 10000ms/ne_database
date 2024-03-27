@@ -1478,6 +1478,11 @@ func (tree *BPlusTree) SearchEqualKey(key []byte) ([][]byte, []map[string][]byte
 	return retKeyList, retValueList, nil
 }
 
+// Search 支持复杂条件的搜索，返回key的值
+func (tree *BPlusTree) Search(whereArgs []*base.WherePartItem) ([]byte, base.StandardError) {
+	// TODO
+}
+
 func (tree *BPlusTree) ChangeRoot(newRootOffset int64) base.StandardError {
 	utils.LogDev(string(base.FunctionModelCoreBPlusTree), 1)(fmt.Sprintf("[BPlusTree.ChangeRoot] change to: %d", newRootOffset))
 	newRoot, err := tree.OffsetLoadNode(newRootOffset)
