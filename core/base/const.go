@@ -20,8 +20,8 @@ const (
 	ValueStringErrorValue = "Error"
 
 	// 字段类型
-	DBDataTypeInt64  DBDataTypeEnumeration = "int64"
-	DBDataTypeString DBDataTypeEnumeration = "string"
+	DBDataTypeBigInt DBDataTypeEnumeration = "bigint"
+	DBDataTypeChar   DBDataTypeEnumeration = "char"
 
 	// 模块
 	FunctionModelCoreConfig         FunctionModel = "core.config"
@@ -59,7 +59,32 @@ const (
 	StorageTypeMemory = "memory"
 
 	// 比较符
-	DataComparatorGreater DataComparator = "greater"
-	DataComparatorEqual   DataComparator = "equal"
-	DataComparatorLess    DataComparator = "less"
+	DataComparatorGreater         DataComparator = "greater"
+	DataComparatorGreaterAndEqual DataComparator = "greater_and_equal"
+	DataComparatorEqual           DataComparator = "equal"
+	DataComparatorNotEqual        DataComparator = "not_equal"
+	DataComparatorLess            DataComparator = "less"
+	DataComparatorLessAndEqual    DataComparator = "less_and_equal"
+	DataComparatorIn              DataComparator = "in"
+	DataComparatorNotIn           DataComparator = "not_in"
+	DataComparatorBetween         DataComparator = "between"
+	DataComparatorLike            DataComparator = "like"
+	DataComparatorILike           DataComparator = "ilike"
+	DataComparatorIsNull          DataComparator = "is_null"
+	DataComparatorIsNotNull       DataComparator = "is_not_null"
+
+	// 比较符支持的参数数量
+	DataComparatorArgsCountGreater         = 1
+	DataComparatorArgsCountGreaterAndEqual = 1
+	DataComparatorArgsCountEqual           = 1
+	DataComparatorArgsCountNotEqual        = 1
+	DataComparatorArgsCountLess            = 1
+	DataComparatorArgsCountLessAndEqual    = 1
+	DataComparatorArgsCountIn              = -1
+	DataComparatorArgsCountNotIn           = -1
+	DataComparatorArgsCountBetween         = 2
+	DataComparatorArgsCountLike            = 1
+	DataComparatorArgsCountILike           = 1
+	DataComparatorArgsCountIsNull          = 0
+	DataComparatorArgsCountIsNotNull       = 0
 )

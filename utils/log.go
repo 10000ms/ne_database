@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -24,20 +23,13 @@ const (
 )
 
 type logDevConfig struct {
-	IsInit      bool
-	InLogDev    bool
-	LowestLevel int
-	Modules     *set.StringsSet
+	IsInit   bool
+	InLogDev bool
+	Modules  *set.StringsSet
 }
 
 func (l *logDevConfig) Init() {
 	l.InLogDev = os.Getenv("LOG_DEV") != ""
-
-	l.LowestLevel = -1
-	levelString := os.Getenv("LOG_DEV_LEVEL")
-	if levelString != "" {
-		l.LowestLevel, _ = strconv.Atoi(levelString)
-	}
 
 	m := make([]string, 0)
 	moduleString := os.Getenv("LOG_DEV_MODULES")
@@ -121,16 +113,11 @@ func NilLogFunc(value ...interface{}) {
 // LogDev 用于开发过程中的日志输出
 // 用法 utils.LogDev("BPlusTree", 1)("需要print的信息")
 // level 只能是1-10
-func LogDev(module string, level int) func(...interface{}) {
+func LogDev(module string) func(...interface{}) {
 	if logDevManger.IsInit != true {
 		logDevManger.Init()
 	}
-	if level > 10 {
-		level = 10
-	} else if level < 1 {
-		level = 1
-	}
-	if !logDevManger.InLogDev || level < logDevManger.LowestLevel {
+	if !logDevManger.InLogDev {
 		return NilLogFunc
 	}
 	if logDevManger.Modules.Contain(module) || logDevManger.Modules.Contain("All") {
@@ -182,4 +169,9 @@ func ToJSON(data interface{}) string {
 	}
 
 	return string(dataByte)
+}
+
+// init log 自动初始化
+func init() {
+	logDevManger.Init()
 }

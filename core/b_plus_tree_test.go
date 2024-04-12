@@ -39,7 +39,7 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	primaryKeyInfo := &tableschema.FieldInfo{
 		Name:      "id",
 		Length:    4 * 2, // 假设最长2字
-		FieldType: tableschema.StringType,
+		FieldType: tableschema.CharType,
 	}
 
 	// 调用被测试函数
@@ -138,18 +138,18 @@ func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -287,18 +287,18 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -380,18 +380,18 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    4 * 2, // 假设最长2字
-			FieldType: tableschema.StringType,
+			FieldType: tableschema.CharType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -458,18 +458,18 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -539,18 +539,18 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    4 * 2, // 假设最长2字
-			FieldType: tableschema.StringType,
+			FieldType: tableschema.CharType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -627,18 +627,18 @@ func TestBPlusTreeNode_BPlusTreeNodeToJson(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -752,18 +752,18 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    4 * 2,
-			FieldType: tableschema.StringType,
+			FieldType: tableschema.CharType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -890,18 +890,18 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    4 * 2,
-			FieldType: tableschema.StringType,
+			FieldType: tableschema.CharType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -1037,18 +1037,18 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    4 * 2,
-			FieldType: tableschema.StringType,
+			FieldType: tableschema.CharType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -1201,18 +1201,18 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 			PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 				Name:      "id",
 				Length:    4 * 2,
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			ValueFieldInfo: []*tableschema.FieldInfo{
 				{
 					Name:      "name",
 					Length:    4 * 5, // 假设最长5字
-					FieldType: tableschema.StringType,
+					FieldType: tableschema.CharType,
 				},
 				{
 					Name:      "age2",
 					Length:    4 * 2, // 假设最长2字
-					FieldType: tableschema.StringType,
+					FieldType: tableschema.CharType,
 				},
 			},
 			PageSize:    config.CoreConfig.PageSize,
@@ -1557,18 +1557,18 @@ func TestBPlusTree_Insert(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -1659,18 +1659,18 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -2013,18 +2013,18 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,

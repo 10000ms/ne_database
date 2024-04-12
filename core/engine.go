@@ -80,11 +80,11 @@ func (e *Engine) LoadTableSchemaInfo(tableName string) (*tableschema.TableMetaIn
 func (e *Engine) DeleteTable(tableName string) base.StandardError {
 	exist, err := e.CheckTableExist(tableName)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[DeleteTable] CheckTableExist错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreEngine))(fmt.Sprintf("[DeleteTable] CheckTableExist错误, %s", err.Error()))
 		return err
 	}
 	if !exist {
-		utils.LogDev(string(base.FunctionModelCoreEngine), 10)(fmt.Sprintf("[Engine.DeleteTable] 表 %s 不存在，所以无需删除", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreEngine))(fmt.Sprintf("[Engine.DeleteTable] 表 %s 不存在，所以无需删除", err.Error()))
 		return nil
 	}
 
@@ -170,7 +170,7 @@ func (e *Engine) CreateTable(tableInfo *tableschema.TableMetaInfo) base.Standard
 	}
 	err = tableInfo.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[CreateTable] 表校验错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreEngine))(fmt.Sprintf("[CreateTable] 表校验错误, %s", err.Error()))
 		return err
 	}
 
@@ -179,7 +179,7 @@ func (e *Engine) CreateTable(tableInfo *tableschema.TableMetaInfo) base.Standard
 
 	exist, err := e.CheckTableExist(tableInfo.Name)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[CreateTable] CheckTableExist错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreEngine))(fmt.Sprintf("[CreateTable] CheckTableExist错误, %s", err.Error()))
 		return err
 	}
 	if exist {
@@ -190,7 +190,7 @@ func (e *Engine) CreateTable(tableInfo *tableschema.TableMetaInfo) base.Standard
 
 	tableInfoByte, err := tableInfo.TableMetaInfoToJsonByte()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreEngine), 1)(fmt.Sprintf("[CreateTable] TableMetaInfoToJsonStr错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreEngine))(fmt.Sprintf("[CreateTable] TableMetaInfoToJsonStr错误, %s", err.Error()))
 		return err
 	}
 

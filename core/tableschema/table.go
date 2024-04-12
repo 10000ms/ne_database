@@ -29,7 +29,7 @@ type TableMetaInfo struct {
 func (info *FieldInfo) Verification() base.StandardError {
 	t := info.FieldType
 	switch t.GetType() {
-	case base.DBDataTypeInt64:
+	case base.DBDataTypeBigInt:
 		if info.Length != base.DataByteLengthInt64 {
 			utils.LogError(fmt.Sprintf("[Verification] 类型<%s>校验错误, 类型长度错误: %d", t.GetType(), info.Length))
 			return base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("int64类型长度错误: %d", info.Length))
@@ -40,19 +40,19 @@ func (info *FieldInfo) Verification() base.StandardError {
 
 func (info *FieldInfo) CompareFieldInfo(info2 *FieldInfo) bool {
 	if info.Name != info2.Name {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：名称不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareFieldInfo] 值信息：名称不一致")
 		return false
 	}
 	if info.Length != info2.Length {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：长度不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareFieldInfo] 值信息：长度不一致")
 		return false
 	}
 	if info.FieldType != info2.FieldType {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：类型不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareFieldInfo] 值信息：类型不一致")
 		return false
 	}
 	if info.DefaultValue != info2.DefaultValue {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareFieldInfo] 值信息：默认值不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareFieldInfo] 值信息：默认值不一致")
 		return false
 	}
 	return true
@@ -78,7 +78,7 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 	}
 	err := info.PrimaryKeyFieldInfo.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 primaryKey info Verification 出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[Verification] 表校验错误 primaryKey info Verification 出错, %s", err.Error()))
 		return err
 	}
 	if info.ValueFieldInfo == nil || len(info.ValueFieldInfo) == 0 {
@@ -93,7 +93,7 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 		}
 		err := i.Verification()
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[Verification] 表校验错误 value info Verification 出错, %s", err.Error()))
 			return err
 		}
 		if existName.Contain(i.Name) {
@@ -117,25 +117,25 @@ func (info *TableMetaInfo) Verification() base.StandardError {
 func (info *TableMetaInfo) CompareTableInfo(info2 *TableMetaInfo) bool {
 	// 1. 对比name
 	if info.Name != info2.Name {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表名称不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareTableInfo] 两表名称不一致")
 		return false
 	}
 
 	// 2. 对比PrimaryKeyFieldInfo
 	if !info.PrimaryKeyFieldInfo.CompareFieldInfo(info2.PrimaryKeyFieldInfo) {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表主键不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareTableInfo] 两表主键不一致")
 		return false
 	}
 
 	// 3. 对比ValueFieldInfo
 	if len(info.ValueFieldInfo) != len(info2.ValueFieldInfo) {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表值数量不一致")
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareTableInfo] 两表值数量不一致")
 		return false
 	}
 	for i, v1 := range info.ValueFieldInfo {
 		v2 := info2.ValueFieldInfo[i]
 		if !v1.CompareFieldInfo(v2) {
-			utils.LogDev(string(base.FunctionModelCoreTableSchema), 5)("[CompareTableInfo] 两表值不一致")
+			utils.LogDev(string(base.FunctionModelCoreTableSchema))("[CompareTableInfo] 两表值不一致")
 			return false
 		}
 	}
@@ -147,7 +147,7 @@ func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 
 	info.PrimaryKeyFieldInfo.RawFieldType, err = FieldTypeToRaw(info.PrimaryKeyFieldInfo.FieldType)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
 		return err
 	}
 
@@ -158,7 +158,7 @@ func (info *TableMetaInfo) FillingRawFieldType() base.StandardError {
 		if i != nil {
 			i.RawFieldType, err = FieldTypeToRaw(i.FieldType)
 			if err != nil {
-				utils.LogDev(string(base.FunctionModelCoreTableSchema), 10)(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
+				utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[TableMetaInfo.FillingRawFieldType] 获取RawFieldType出错, %s", err.Error()))
 				return err
 			}
 		}
@@ -175,13 +175,13 @@ func (info *TableMetaInfo) TableMetaInfoToJsonByte() ([]byte, base.StandardError
 
 	err = info.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
 		return nil, err
 	}
 
 	err = info.FillingRawFieldType()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[TableMetaInfoToJsonByte] 表校验错误, %s", err.Error()))
 		return nil, err
 	}
 
@@ -204,10 +204,10 @@ func InitTableMetaInfo(name string) *TableMetaInfo {
 
 func RawToFieldType(raw string) (MetaType, base.StandardError) {
 	switch raw {
-	case string(base.DBDataTypeInt64):
-		return Int64Type, nil
-	case string(base.DBDataTypeString):
-		return StringType, nil
+	case string(base.DBDataTypeBigInt):
+		return BigIntType, nil
+	case string(base.DBDataTypeChar):
+		return CharType, nil
 	default:
 		utils.LogError(fmt.Sprintf("[RawToFieldType] 错误的RawFieldType: %s", raw))
 		return nil, base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeInput, base.ErrorBaseCodeInnerParameterError, fmt.Errorf("错误的RawFieldType: %s", raw))
@@ -216,10 +216,10 @@ func RawToFieldType(raw string) (MetaType, base.StandardError) {
 
 func FieldTypeToRaw(fieldType MetaType) (string, base.StandardError) {
 	switch fieldType {
-	case Int64Type:
-		return string(base.DBDataTypeInt64), nil
-	case StringType:
-		return string(base.DBDataTypeString), nil
+	case BigIntType:
+		return string(base.DBDataTypeBigInt), nil
+	case CharType:
+		return string(base.DBDataTypeChar), nil
 	default:
 		utils.LogError(fmt.Sprintf("[FieldTypeToRaw] 错误的fieldType: %#v", fieldType))
 		return "", base.NewDBError(base.FunctionModelCoreTableSchema, base.ErrorTypeType, base.ErrorBaseCodeInnerTypeError, fmt.Errorf("错误的fieldType: %#v", fieldType))
@@ -241,13 +241,13 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 	// 替换主键的 FieldType 为真实
 	pkFieldType, err := RawToFieldType(r.PrimaryKeyFieldInfo.RawFieldType)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] primaryKey RawToFieldType出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[InitTableMetaInfoByJson] primaryKey RawToFieldType出错, %s", err.Error()))
 		return nil, err
 	}
 	r.PrimaryKeyFieldInfo.FieldType = pkFieldType
 	err = r.PrimaryKeyFieldInfo.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] PrimaryKeyFieldInfo.Verification出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[InitTableMetaInfoByJson] PrimaryKeyFieldInfo.Verification出错, %s", err.Error()))
 		return nil, err
 	}
 
@@ -255,20 +255,20 @@ func InitTableMetaInfoByJson(metaJson string) (*TableMetaInfo, base.StandardErro
 	for _, v := range r.ValueFieldInfo {
 		valueFieldType, err := RawToFieldType(v.RawFieldType)
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value RawToFieldType出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[InitTableMetaInfoByJson] value RawToFieldType出错, %s", err.Error()))
 			return nil, err
 		}
 		v.FieldType = valueFieldType
 		err = v.Verification()
 		if err != nil {
-			utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] value.Verification出错, %s", err.Error()))
+			utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[InitTableMetaInfoByJson] value.Verification出错, %s", err.Error()))
 			return nil, err
 		}
 	}
 
 	err = r.Verification()
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema), 1)(fmt.Sprintf("[InitTableMetaInfoByJson] table.Verification出错, %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[InitTableMetaInfoByJson] table.Verification出错, %s", err.Error()))
 		return nil, err
 	}
 

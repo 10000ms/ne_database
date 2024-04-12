@@ -91,18 +91,18 @@ func TestEngine_LoadTableSchemaInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    8,
-				FieldType: tableschema.Int64Type,
+				FieldType: tableschema.BigIntType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -142,18 +142,18 @@ func TestEngine_CreateTable(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    8,
-				FieldType: tableschema.Int64Type,
+				FieldType: tableschema.BigIntType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -262,18 +262,18 @@ func TestEngine_AllTable(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "age",
 				Length:    8,
-				FieldType: tableschema.Int64Type,
+				FieldType: tableschema.BigIntType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -292,18 +292,18 @@ func TestEngine_AllTable(t *testing.T) {
 		PrimaryKeyFieldInfo: &tableschema.FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: tableschema.Int64Type,
+			FieldType: tableschema.BigIntType,
 		},
 		ValueFieldInfo: []*tableschema.FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: tableschema.StringType,
+				FieldType: tableschema.CharType,
 			},
 			{
 				Name:      "idCard",
 				Length:    8,
-				FieldType: tableschema.Int64Type,
+				FieldType: tableschema.BigIntType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,

@@ -13,7 +13,7 @@ func TestFieldInfo_Verification(t *testing.T) {
 	info := &FieldInfo{
 		Name:      "test_field",
 		Length:    8,
-		FieldType: Int64Type,
+		FieldType: BigIntType,
 	}
 
 	err := info.Verification()
@@ -39,16 +39,16 @@ func TestRawToFieldType(t *testing.T) {
 	if err != nil {
 		t.Errorf("[RawToFieldType] The test case did not pass, expecting no errors but received an error: %s", err.Error())
 	}
-	if typeTest != Int64Type {
-		t.Errorf("[RawToFieldType] test fail, expect: %v, got: %v", Int64Type, typeTest)
+	if typeTest != BigIntType {
+		t.Errorf("[RawToFieldType] test fail, expect: %v, got: %v", BigIntType, typeTest)
 	}
 
 	typeTest, err = RawToFieldType("string")
 	if err != nil {
 		t.Errorf("[RawToFieldType] The test case did not pass, expecting no errors but received an error: %s", err.Error())
 	}
-	if typeTest != StringType {
-		t.Errorf("[RawToFieldType] test fail, expect: %v, got: %v", StringType, typeTest)
+	if typeTest != CharType {
+		t.Errorf("[RawToFieldType] test fail, expect: %v, got: %v", CharType, typeTest)
 	}
 
 	typeTest, err = RawToFieldType("errorType")
@@ -122,14 +122,14 @@ func TestFieldInfo_CompareFieldInfo(t *testing.T) {
 	info := &FieldInfo{
 		Name:         "test_field",
 		Length:       8,
-		FieldType:    Int64Type,
+		FieldType:    BigIntType,
 		DefaultValue: "1",
 	}
 
 	info2 := &FieldInfo{
 		Name:         "test_field",
 		Length:       8,
-		FieldType:    Int64Type,
+		FieldType:    BigIntType,
 		DefaultValue: "1",
 	}
 
@@ -142,7 +142,7 @@ func TestFieldInfo_CompareFieldInfo(t *testing.T) {
 	info3 := &FieldInfo{
 		Name:         "test_field1",
 		Length:       8,
-		FieldType:    Int64Type,
+		FieldType:    BigIntType,
 		DefaultValue: "1",
 	}
 
@@ -155,7 +155,7 @@ func TestFieldInfo_CompareFieldInfo(t *testing.T) {
 	info4 := &FieldInfo{
 		Name:         "test_field",
 		Length:       7,
-		FieldType:    Int64Type,
+		FieldType:    BigIntType,
 		DefaultValue: "1",
 	}
 
@@ -168,7 +168,7 @@ func TestFieldInfo_CompareFieldInfo(t *testing.T) {
 	info5 := &FieldInfo{
 		Name:         "test_field",
 		Length:       8,
-		FieldType:    StringType,
+		FieldType:    CharType,
 		DefaultValue: "1",
 	}
 
@@ -181,7 +181,7 @@ func TestFieldInfo_CompareFieldInfo(t *testing.T) {
 	info6 := &FieldInfo{
 		Name:         "test_field",
 		Length:       8,
-		FieldType:    Int64Type,
+		FieldType:    BigIntType,
 		DefaultValue: "2",
 	}
 
@@ -202,18 +202,18 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -225,18 +225,18 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -254,18 +254,18 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -283,18 +283,18 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "i",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 			{
 				Name:      "age",
 				Length:    4 * 2, // 假设最长2字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -312,13 +312,13 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
@@ -336,18 +336,18 @@ func TestTableMetaInfo_CompareTableInfo(t *testing.T) {
 		PrimaryKeyFieldInfo: &FieldInfo{
 			Name:      "id",
 			Length:    8,
-			FieldType: Int64Type,
+			FieldType: BigIntType,
 		},
 		ValueFieldInfo: []*FieldInfo{
 			{
 				Name:      "name",
 				Length:    4 * 5, // 假设最长5字
-				FieldType: StringType,
+				FieldType: CharType,
 			},
 			{
 				Name:      "age",
 				Length:    8,
-				FieldType: Int64Type,
+				FieldType: BigIntType,
 			},
 		},
 		PageSize:    config.CoreConfig.PageSize,
