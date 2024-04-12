@@ -30,6 +30,12 @@ type MetaType interface {
 	Equal([]byte, []byte) (bool, base.StandardError)
 	// Less 数据对比: 小于
 	Less([]byte, []byte) (bool, base.StandardError)
+	// Like 数据对比: like TODO
+	Like([]byte, []byte) (bool, base.StandardError)
+	// ILike 数据对比: iLike TODO
+	ILike([]byte, []byte) (bool, base.StandardError)
+	// IsNull 数据对比: 是否为Null TODO
+	IsNull([]byte) (bool, base.StandardError)
 }
 
 type bigIntType struct {

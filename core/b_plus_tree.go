@@ -1486,12 +1486,26 @@ func (tree *BPlusTree) SearchKey(keyWhereArgs []*base.WherePartItem) ([][]byte, 
 		utils.LogError(fmt.Sprintf("[BPlusTree.SearchKey] %s", errMsg))
 		return nil, nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
 	}
+	for _, i := range keyWhereArgs {
+		if i == nil {
+			errMsg := fmt.Sprintf("空查询请求")
+			utils.LogError(fmt.Sprintf("[BPlusTree.SearchKey] %s", errMsg))
+			return nil, nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+		}
+		if !i.Validation() {
+			errMsg := fmt.Sprintf("不合法查询: %s", utils.ToJSON(i))
+			utils.LogError(fmt.Sprintf("[BPlusTree.SearchKey] %s", errMsg))
+			return nil, nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
+		}
+	}
 
-	if (len(keyWhereArgs) == 1 &&
+	// isDirectlySearchEqualKey 是否不需要特殊处理，直接使用SearchEqualKey
+	// 这里不处理 in 并且 args 数量为 1 的情况，这一类情况属于 sql 优化，需要在上层处理
+	var isDirectlySearchEqualKey = len(keyWhereArgs) == 1 &&
 		keyWhereArgs[0].TargetColumn == tree.TableInfo.PrimaryKeyFieldInfo.Name &&
-		keyWhereArgs[0].Operate ==
-		) {
-
+		keyWhereArgs[0].Operate == base.DataComparatorEqual
+	if isDirectlySearchEqualKey {
+		return tree.SearchEqualKey(keyWhereArgs[0].Args[0])
 	}
 
 	maxKey := make([]byte, 0)
@@ -1510,14 +1524,7 @@ func (tree *BPlusTree) SearchKey(keyWhereArgs []*base.WherePartItem) ([][]byte, 
 	}
 
 	// TODO
-	switch operate {
-	case base.DataComparatorEqual:
-		return tree.SearchEqualKey()
-	default:
-		errMsg := fmt.Sprintf("未实现操作 %s", operate)
-		utils.LogError(fmt.Sprintf("[BPlusTree.SearchKey] %s", errMsg))
-		return nil, nil, base.NewDBError(base.FunctionModelCoreBPlusTree, base.ErrorTypeInput, base.ErrorBaseCodeParameterError, fmt.Errorf(errMsg))
-	}
+
 }
 
 // Search 支持复杂条件的搜索，返回key的值
