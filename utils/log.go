@@ -20,6 +20,9 @@ const (
 	fgMagenta
 	fgCyan
 	fgWhite
+
+	LogModuleDevOSKey        = "LOG_DEV"
+	LogModuleLogModulesOSKey = "LOG_DEV_MODULES"
 )
 
 type logDevConfig struct {
@@ -29,10 +32,10 @@ type logDevConfig struct {
 }
 
 func (l *logDevConfig) Init() {
-	l.InLogDev = os.Getenv("LOG_DEV") != ""
+	l.InLogDev = os.Getenv(LogModuleDevOSKey) != ""
 
 	m := make([]string, 0)
-	moduleString := os.Getenv("LOG_DEV_MODULES")
+	moduleString := os.Getenv(LogModuleLogModulesOSKey)
 	if moduleString != "" {
 		m = strings.Split(moduleString, ",")
 	}

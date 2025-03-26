@@ -30,11 +30,11 @@ type MetaType interface {
 	Equal([]byte, []byte) (bool, base.StandardError)
 	// Less 数据对比: 小于
 	Less([]byte, []byte) (bool, base.StandardError)
-	// Like 数据对比: like TODO
+	// Like 数据对比: like
 	Like([]byte, []byte) (bool, base.StandardError)
-	// ILike 数据对比: iLike TODO
+	// ILike 数据对比: iLike
 	ILike([]byte, []byte) (bool, base.StandardError)
-	// IsNull 数据对比: 是否为Null TODO
+	// IsNull 数据对比: 是否为Null
 	IsNull([]byte) (bool, base.StandardError)
 }
 
@@ -86,12 +86,12 @@ func (t bigIntType) TrimRaw(data []byte) []byte {
 func (t bigIntType) Greater(data1 []byte, data2 []byte) (bool, base.StandardError) {
 	value1, err := base.ByteListToInt64(data1)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Greater.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	value2, err := base.ByteListToInt64(data2)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Greater.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	return value1 > value2, nil
@@ -100,12 +100,12 @@ func (t bigIntType) Greater(data1 []byte, data2 []byte) (bool, base.StandardErro
 func (t bigIntType) Equal(data1 []byte, data2 []byte) (bool, base.StandardError) {
 	value1, err := base.ByteListToInt64(data1)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Equal.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	value2, err := base.ByteListToInt64(data2)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Equal.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	return value1 == value2, nil
@@ -114,15 +114,34 @@ func (t bigIntType) Equal(data1 []byte, data2 []byte) (bool, base.StandardError)
 func (t bigIntType) Less(data1 []byte, data2 []byte) (bool, base.StandardError) {
 	value1, err := base.ByteListToInt64(data1)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Less.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	value2, err := base.ByteListToInt64(data2)
 	if err != nil {
-		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.bigIntType.base.ByteListToInt64] err: %s", err.Error()))
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.Less.base.ByteListToInt64] err: %s", err.Error()))
 		return false, err
 	}
 	return value1 < value2, nil
+}
+
+func (t bigIntType) Like(originValue []byte, compareValue []byte) (bool, base.StandardError) {
+	// 数字没有Like
+	return false, nil
+}
+
+func (t bigIntType) ILike(originValue []byte, compareValue []byte) (bool, base.StandardError) {
+	// 数字没有Like
+	return false, nil
+}
+
+func (t bigIntType) IsNull(checkValue []byte) (bool, base.StandardError) {
+	value, err := base.ByteListToInt64(checkValue)
+	if err != nil {
+		utils.LogDev(string(base.FunctionModelCoreTableSchema))(fmt.Sprintf("[bigIntType.IsNull.base.ByteListToInt64] err: %s", err.Error()))
+		return false, err
+	}
+	return value == 0, nil
 }
 
 type charType struct {
@@ -223,6 +242,41 @@ func (t charType) Less(data1 []byte, data2 []byte) (bool, base.StandardError) {
 		return false, nil
 	}
 	return false, nil
+}
+
+func (t charType) Like(originValue []byte, compareValue []byte) (bool, base.StandardError) {
+	var (
+		origin  = ""
+		compare = string(compareValue)
+	)
+	if originValue[0] == base.SymbolDataComparatorLikePlaceholder && originValue[len(originValue)-1] == base.SymbolDataComparatorLikePlaceholder {
+		if len(originValue) > 2 {
+			origin = string(originValue[1 : len(originValue)-2])
+		}
+	} else if originValue[len(originValue)-1] == base.SymbolDataComparatorLikePlaceholder {
+		if len(originValue) > 1 {
+			origin = string(originValue[:len(originValue)-2])
+		}
+	} else if originValue[0] == base.SymbolDataComparatorLikePlaceholder {
+		if len(originValue) > 1 {
+			origin = string(originValue[1:])
+		}
+	}
+	return strings.Contains(compare, origin), nil
+}
+
+func (t charType) ILike(originValue []byte, compareValue []byte) (bool, base.StandardError) {
+	origin := string(originValue)
+	compare := string(compareValue)
+	newOrigin := strings.ToLower(origin)
+	newCompare := strings.ToLower(compare)
+	return t.Like([]byte(newOrigin), []byte(newCompare))
+}
+
+func (t charType) IsNull(checkValue []byte) (bool, base.StandardError) {
+	empty := checkValue == nil || len(checkValue) == 0
+	nullString := len(checkValue) == 1 && checkValue[0] == NullStringByte
+	return empty || nullString, nil
 }
 
 var (

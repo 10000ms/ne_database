@@ -23,7 +23,6 @@ var testStorageType = base.StorageTypeMemory
 func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 	// 初始化一下
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 
 	// 构造测试数据
@@ -120,7 +119,6 @@ func TestGetNoLeafNodeByteDataReadLoopData(t *testing.T) {
 func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
 	// 初始化一下
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 
 	// 构造测试数据
@@ -260,7 +258,6 @@ func TestGetLeafNodeByteDataReadLoopData(t *testing.T) {
 func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 	// 初始化一下
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -448,7 +445,6 @@ func TestBPlusTreeNode_LoadByteData(t *testing.T) {
 func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 	// 初始化一下
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -607,7 +603,6 @@ func TestBPlusTreeNode_NodeToByteData(t *testing.T) {
 
 func TestBPlusTreeNode_BPlusTreeNodeToJson(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 
 	key1, err := base.Int64ToByteList(int64(1))
@@ -680,7 +675,6 @@ func TestBPlusTreeNode_BPlusTreeNodeToJson(t *testing.T) {
 
 func TestLoadBPlusTreeFromJson(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -818,7 +812,6 @@ func TestLoadBPlusTreeFromJson(t *testing.T) {
 
 func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -964,7 +957,6 @@ func TestBPlusTree_BPlusTreeToJson(t *testing.T) {
 
 func TestCompareBPlusTreesSame(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -1235,7 +1227,6 @@ func TestCompareBPlusTreesSame(t *testing.T) {
 
 func TestCompareBPlusTreeNodesSame(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 
 	node1 := BPlusTreeNode{
@@ -1535,7 +1526,6 @@ func TestCompareBPlusTreeNodesSame(t *testing.T) {
 
 func TestBPlusTree_Insert(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -1633,7 +1623,6 @@ func TestBPlusTree_Insert(t *testing.T) {
 
 func TestBPlusTree_Insert_2(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -1987,7 +1976,6 @@ func TestBPlusTree_Insert_2(t *testing.T) {
 
 func TestBPlusTree_Insert_3(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2339,7 +2327,6 @@ func TestBPlusTree_Insert_3(t *testing.T) {
 
 func TestBPlusTree_NodeParentMap(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2390,7 +2377,6 @@ func TestBPlusTree_NodeParentMap(t *testing.T) {
 
 func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2586,7 +2572,6 @@ func TestBPlusTreeNode_IndexNodeClear(t *testing.T) {
 
 func TestBPlusTreeNode_LeafNodeClear(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2718,7 +2703,6 @@ func TestBPlusTreeNode_LeafNodeClear(t *testing.T) {
 
 func TestBPlusTree_Delete_1(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2770,7 +2754,6 @@ func TestBPlusTree_Delete_1(t *testing.T) {
 
 func TestBPlusTree_Delete_2(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2875,7 +2858,6 @@ func TestBPlusTree_Delete_2(t *testing.T) {
 
 func TestBPlusTree_Delete_3(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -2925,7 +2907,6 @@ func TestBPlusTree_Delete_3(t *testing.T) {
 
 func TestBPlusTree_Delete_4(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -3212,7 +3193,6 @@ func TestBPlusTree_Delete_4(t *testing.T) {
 
 func TestBPlusTree_Update_1(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -3271,7 +3251,6 @@ func TestBPlusTree_Update_1(t *testing.T) {
 
 func TestBPlusTree_Update_2(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -3330,7 +3309,6 @@ func TestBPlusTree_Update_2(t *testing.T) {
 
 func TestBPlusTree_Update_3(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -3366,7 +3344,6 @@ func TestBPlusTree_Update_3(t *testing.T) {
 
 func TestBPlusTree_SearchEqualKey_1(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))
@@ -3422,7 +3399,6 @@ func TestBPlusTree_SearchEqualKey_1(t *testing.T) {
 
 func TestBPlusTree_SearchEqualKey_2(t *testing.T) {
 	_ = os.Setenv("LOG_DEV", "1")
-	_ = os.Setenv("LOG_DEV_LEVEL", "0")
 	_ = os.Setenv("LOG_DEV_MODULES", "All")
 	pageSize := 1000
 	_ = config.CoreConfig.InitByJSON(fmt.Sprintf("{\"Dev\":true,\"PageSize\":%d}", pageSize))

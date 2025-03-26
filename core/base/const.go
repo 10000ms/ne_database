@@ -87,4 +87,6 @@ const (
 	DataComparatorArgsCountILike           = 1
 	DataComparatorArgsCountIsNull          = 0
 	DataComparatorArgsCountIsNotNull       = 0
+
+	SymbolDataComparatorLikePlaceholder = 0x37 // %
 )
